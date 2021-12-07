@@ -77,7 +77,7 @@ def extract_pitch_energy(save_path_pitch: Path,
         np.save(str(save_path_energy / f'{item_id}.npy'), phoneme_energy, allow_pickle=False)
 
     for i in range(len(phoneme_pitches)):
-        mean, var = normalize_values(phoneme_pitches[i])
+        mean, var = normalize_values(phoneme_pitches[i:i+1])
         print(f'\n{i} Pitch mean: {mean} var: {var}')
     for item_id, phoneme_pitch in phoneme_pitches:
         np.save(str(save_path_pitch / f'{item_id}.npy'), phoneme_pitch, allow_pickle=False)

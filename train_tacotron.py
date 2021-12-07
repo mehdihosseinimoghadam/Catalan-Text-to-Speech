@@ -64,7 +64,14 @@ def extract_pitch_energy(save_path_pitch: Path,
             msg = f'{bar} {prog_idx}/{len(all_data)} Files '
             stream(msg)
         except Exception as e:
+            if item_id in val_data:
+                del val_data[item_id]
+            if item_id in train_data:
+                del train_data[item_id]
             print(e)
+
+    pickle_binary(train_data, paths.data / 'train_dataset_filtered.pkl')
+    pickle_binary(val_data, paths.data / 'val_dataset_filtered.pkl')
 
     for item_id, phoneme_energy in phoneme_energies:
         np.save(str(save_path_energy / f'{item_id}.npy'), phoneme_energy, allow_pickle=False)

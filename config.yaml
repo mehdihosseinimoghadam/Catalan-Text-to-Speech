@@ -98,9 +98,9 @@ forward_tacotron:
     prenet_dropout: 0.5
     prenet_num_highways: 4
 
-    rnn_dims: 512
+    rnn_dims: 64
 
-    postnet_dims: 256
+    postnet_dims: 64
     postnet_k: 8
     postnet_num_highways: 4
     postnet_dropout: 0.
@@ -120,7 +120,7 @@ forward_tacotron:
     checkpoint_every: 10_000      # checkpoints the model every x steps
     plot_every: 1000              # generates samples and plots every x steps
 
-    filter_attention: True               # whether to filter data with bad attention scores
+    filter_attention: False               # whether to filter data with bad attention scores
     min_attention_sharpness: 0.5         # filter data with bad attention sharpness score, if 0 then no filter
     min_attention_alignment: 0.95        # filter data with bad attention alignment score, if 0 then no filter
 

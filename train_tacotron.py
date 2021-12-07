@@ -26,8 +26,9 @@ def normalize_values(phoneme_val):
     mean, std = np.mean(nonzeros), np.std(nonzeros)
     for item_id, v in phoneme_val:
         zero_idxs = np.where(v == 0.0)[0]
-        v -= mean
-        v /= std
+        if std > 0:
+            v -= mean
+            v /= std
         v[zero_idxs] = 0.0
     return mean, std
 

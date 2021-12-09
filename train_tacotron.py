@@ -21,16 +21,12 @@ from utils.paths import Paths
 
 
 def normalize_values(phoneme_val):
-    nonzeros = np.concatenate([v[np.where(v != 0.0)[0]]
-                               for item_id, v in phoneme_val])
-    mean, std = np.mean(nonzeros), np.std(nonzeros)
     for item_id, v in phoneme_val:
         zero_idxs = np.where(v == 0.0)[0]
-        if std > 0:
-            v -= mean
-            v /= std
         v[zero_idxs] = 0.0
-    return mean, std
+        v[0] = 0.0
+        v[1:] = np.sign(v[1:] - v[0:-1]).astype(np.float32)
+    return 0, 0
 
 
 # adapted from https://github.com/NVIDIA/DeepLearningExamples/blob/

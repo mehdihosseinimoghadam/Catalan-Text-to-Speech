@@ -90,6 +90,7 @@ class TacoTrainer:
                         msg = f'| Epoch: {e}/{epochs} ({i}/{total_iters}) | Loss CTC: {loss_ctc.item():#.4} ' \
                               f'| Step: {k}k | '
                         stream(msg)
+                        self.writer.add_scalar('CTC_Loss', loss_ctc, model.get_step())
                     continue
 
                 m1_hat, m2_hat, attention, ctc_out = model(batch['x'], batch['mel'])

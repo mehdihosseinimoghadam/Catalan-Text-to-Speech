@@ -214,7 +214,7 @@ class Tacotron(nn.Module):
         self.decoder = Decoder(n_mels, decoder_dims, lstm_dims)
         self.postnet = CBHG(postnet_k, n_mels, postnet_dims, [256, 80], num_highways)
         self.aligner = Aligner(num_chars)
-        self.embedding = nn.Embedding(num_chars, embedding_dim=n_mels)
+        self.ctc_lin = nn.Linear(num_chars, 80)
         self.num_chars = num_chars
 
         self.post_proj = nn.Linear(postnet_dims * 2, n_mels, bias=False)
@@ -239,19 +239,8 @@ class Tacotron(nn.Module):
             self.step += 1
 
         ctc_out = self.aligner(m.transpose(1, 2))
-        ctc_out = ctc_out[:, :, 1:].softmax(-1)
-        emb_range = torch.arange(0, self.num_chars-1, device=device).long()
-        emb_range = self.embedding(emb_range)
-        m_in = m.transpose(1, 2)
-        batch, time, vdim = m_in.size()
-        ctc_query = torch.zeros((batch, time, 80), device=device)
-        for t in range(m_in.size(1)):
-            v = ctc_out[:, t, :][:, :, None]
-            v = v * emb_range[None, :, :]
-            v = torch.sum(v, dim=1)
-            ctc_query[:, t, :] = v
+        ctc_query = self.ctc_lin(ctc_out).transpose(1, 2)
 
-        ctc_query = ctc_query.transpose(1, 2)
         batch_size, _, steps = m.size()
 
         # Initialise all hidden states and pack into tuple

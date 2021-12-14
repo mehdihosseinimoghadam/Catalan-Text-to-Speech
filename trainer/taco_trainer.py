@@ -78,7 +78,7 @@ class TacoTrainer:
                 model.train()
                 k = step // 1000
 
-                if step < 1000:
+                if step < 10000:
                     model.step += 1
                     ctc_out = model.aligner(batch['mel'].transpose(1, 2))
                     ctc_out = ctc_out.transpose(0, 1).log_softmax(2)

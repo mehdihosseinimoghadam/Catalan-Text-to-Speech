@@ -238,7 +238,7 @@ class Tacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        ctc_out = self.aligner(m.transpose(1, 2))
+        ctc_out = self.aligner(m.transpose(1, 2)).detach()
         ctc_query = self.ctc_lin(ctc_out).transpose(1, 2)
 
         batch_size, _, steps = m.size()

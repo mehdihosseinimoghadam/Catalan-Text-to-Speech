@@ -18,6 +18,7 @@ from utils.duration_extraction import extract_durations_per_count, extract_durat
 from utils.files import pickle_binary, unpickle_binary, read_config
 from utils.metrics import attention_score
 from utils.paths import Paths
+from utils.text.tokenizer import Tokenizer
 
 
 def normalize_values(phoneme_val):
@@ -106,7 +107,7 @@ def create_align_features(model: Tacotron,
     model.eval()
     device = next(model.parameters()).device  # use same device as model parameters
     iters = len(val_set) + len(train_set)
-    dataset = itertools.chain(train_set, val_set)
+    dataset = itertools.chain(val_set)
     att_score_dict = {}
 
     if config['preprocessing']['extract_durations_with_dijkstra']:
@@ -115,6 +116,8 @@ def create_align_features(model: Tacotron,
     else:
         print('Extracting durations using attention peak counts...')
         dur_extraction_func = extract_durations_per_count
+
+    tokenizer = Tokenizer()
 
     for i, batch in enumerate(dataset, 1):
         batch = to_device(batch, device=device)
@@ -126,11 +129,20 @@ def create_align_features(model: Tacotron,
         align_score, sharp_score = float(align_score[0]), float(sharp_score[0])
         att_score_dict[item_id] = (align_score, sharp_score)
         durs = dur_extraction_func(seq, att, mel_len)
+        print(item_id)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
         np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
+        text = tokenizer.decode(batch['x'][0].cpu().numpy())
+
+        zipped = [(c, d) for c, d in zip(text, durs)]
+        print(zipped)
+
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
+        #plot_attention(att)
+        #plt.savefig(f'/tmp/att/{item_id}.png')
+
         stream(msg)
     pickle_binary(att_score_dict, paths.data / 'att_score_dict.pkl')
     print('Extracting Pitch Values...')

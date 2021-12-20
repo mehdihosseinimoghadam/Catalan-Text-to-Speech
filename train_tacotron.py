@@ -107,7 +107,7 @@ def create_align_features(model: Tacotron,
     model.eval()
     device = next(model.parameters()).device  # use same device as model parameters
     iters = len(val_set) + len(train_set)
-    dataset = itertools.chain(val_set)
+    dataset = itertools.chain(train_set, val_set)
     att_score_dict = {}
 
     if config['preprocessing']['extract_durations_with_dijkstra']:

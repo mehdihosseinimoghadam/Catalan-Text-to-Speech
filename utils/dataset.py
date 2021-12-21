@@ -234,8 +234,11 @@ class TacoDataset(Dataset):
         item_id = self.metadata[index]
         text = self.text_dict[item_id]
         x = self.tokenizer(text)
+        x.reverse()
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
+        mel = np.flip(mel, axis=-1)
         mel_len = mel.shape[-1]
+
         return {'x': x, 'mel': mel, 'item_id': item_id,
                 'mel_len': mel_len, 'x_len': len(x)}
 

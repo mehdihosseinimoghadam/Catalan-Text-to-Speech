@@ -237,12 +237,11 @@ class TacoDataset(Dataset):
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
 
-        if random.random() < 0.5:
-            x.reverse()
-            mel = np.flip(mel, axis=-1)
+        x_rev = x[:].reverse()
+        mel_rev = np.flip(mel[:], axis=-1)
 
         return {'x': x, 'mel': mel, 'item_id': item_id,
-                'mel_len': mel_len, 'x_len': len(x)}
+                'mel_len': mel_len, 'x_len': len(x), 'x_rev': x_rev, 'mel_rev': mel_rev}
 
     def __len__(self):
         return len(self.metadata)

@@ -118,11 +118,23 @@ def create_align_features(model: Tacotron,
 
     for i, batch in enumerate(dataset, 1):
         batch = to_device(batch, device=device)
+
         with torch.no_grad():
             _, _, att_batch = model(batch['x'], batch['mel'])
+        with torch.no_grad():
+            x_rev = torch.flip(batch['x'], dims=[1])
+            mel_rev = torch.flip(batch['mel'], dims=[2])
+            _, _, att_batch_rev = model(x_rev, mel_rev)
+
+        att_batch_rev = torch.flip(att_batch_rev, dims=[1, 2])
+        att_batch = torch.mean(torch.stack([att_batch, att_batch_rev]), dim=0)
+
         align_score, sharp_score = attention_score(att_batch, batch['mel_len'], r=1)
         att_batch = np_now(att_batch)
+        att_batch_rev = np_now(att_batch_rev)
+
         seq, att, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
+        att_rev = att_batch_rev[0]
         align_score, sharp_score = float(align_score[0]), float(sharp_score[0])
         att_score_dict[item_id] = (align_score, sharp_score)
         durs = dur_extraction_func(seq, att, mel_len)
@@ -131,6 +143,12 @@ def create_align_features(model: Tacotron,
         np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
+
+        #plot_attention(att)
+        #plt.savefig(f'/tmp/att/{item_id}.png')
+        #plot_attention(att_rev)
+        #plt.savefig(f'/tmp/att/{item_id}_rev.png')
+
         stream(msg)
     pickle_binary(att_score_dict, paths.data / 'att_score_dict.pkl')
     print('Extracting Pitch Values...')

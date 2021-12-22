@@ -64,11 +64,6 @@ def extract_durations_with_dijkstra(seq: np.array,
     tokenizer = Tokenizer()
     text = tokenizer.decode(seq.cpu().numpy())
 
-    for j in range(mel_len):
-        for i in range(len(seq)):
-            if text[i] in ' !?,:.':
-                att[j, i] = att[j, i] + 0.1
-
     path_probs = 1.-att[:mel_len, :]
     adj_matrix = to_adj_matrix(path_probs)
     dist_matrix, predecessors = dijkstra(csgraph=adj_matrix, directed=True,
@@ -85,6 +80,8 @@ def extract_durations_with_dijkstra(seq: np.array,
     cols = path_probs.shape[1]
     mel_text = {}
     durations = np.zeros(seq.shape[0], dtype=np.int32)
+    dur_probs = np.zeros(seq.shape[0], dtype=np.float32)
+    mel_probs = np.zeros(mel_len, dtype=np.float32)
 
     # collect indices (mel, text) along the path
     for node_index in path:
@@ -94,11 +91,16 @@ def extract_durations_with_dijkstra(seq: np.array,
     for j in mel_text.values():
         durations[j] += 1
 
-    #for j in range(mel_len):
-    #    m_ind = att[j, :].argmax(axis=0)
-    #    print(text[m_ind], m_ind, mel_text[j], att[j, m_ind])
+    for j in range(mel_len):
+        t_ind = mel_text[j]
+        prob = att[j, t_ind]
+        mel_probs[j] = prob
+        dur_probs[t_ind] += prob
 
-    return durations
+    for i in range(len(dur_probs)):
+        dur_probs[i] = dur_probs[i] / durations[i]
+
+    return durations, dur_probs, mel_probs
 
 
 def extract_durations_per_count(seq: np.array,

@@ -16,6 +16,8 @@ class Paths:
         self.raw_pitch = self.data/'raw_pitch'
         self.phon_pitch = self.data/'phon_pitch'
         self.phon_energy = self.data/'phon_energy'
+        self.dur_probs = self.data/'dur_probs'
+        self.mel_probs = self.data/'mel_probs'
 
         self.model_output = self.base / 'model_output'
 
@@ -37,6 +39,8 @@ class Paths:
         os.makedirs(self.mel, exist_ok=True)
         os.makedirs(self.gta, exist_ok=True)
         os.makedirs(self.alg, exist_ok=True)
+        os.makedirs(self.dur_probs, exist_ok=True)
+        os.makedirs(self.mel_probs, exist_ok=True)
         os.makedirs(self.raw_pitch, exist_ok=True)
         os.makedirs(self.phon_pitch, exist_ok=True)
         os.makedirs(self.phon_energy, exist_ok=True)

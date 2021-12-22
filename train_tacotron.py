@@ -126,22 +126,22 @@ def create_align_features(model: Tacotron,
         align_score, sharp_score = attention_score(att_batch, batch['mel_len'], r=1)
         att_batch = np_now(att_batch)
         seq, att, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
+        plot_attention(att)
+        plt.savefig(f'/tmp/att/{item_id}.png')
         align_score, sharp_score = float(align_score[0]), float(sharp_score[0])
         att_score_dict[item_id] = (align_score, sharp_score)
-        durs = dur_extraction_func(seq, att, mel_len)
+        durs, dur_pobs, mel_probs = dur_extraction_func(seq, att, mel_len)
         print(item_id)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
         np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
-        text = tokenizer.decode(batch['x'][0].cpu().numpy())
+        np.save(str(paths.dur_probs / f'{item_id}.npy'), dur_pobs, allow_pickle=False)
+        np.save(str(paths.mel_probs / f'{item_id}.npy'), mel_probs, allow_pickle=False)
 
-        zipped = [(c, d) for c, d in zip(text, durs)]
-        print(zipped)
+        print(dur_pobs)
 
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
-        #plot_attention(att)
-        #plt.savefig(f'/tmp/att/{item_id}.png')
 
         stream(msg)
     pickle_binary(att_score_dict, paths.data / 'att_score_dict.pkl')

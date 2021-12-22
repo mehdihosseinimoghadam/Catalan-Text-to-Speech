@@ -91,11 +91,15 @@ class ForwardTrainer:
 
                 dur_loss = self.l1_loss((pred['dur'] * batch['dur_probs']).unsqueeze(1),
                                         (batch['dur'] * batch['dur_probs']).unsqueeze(1), batch['x_len'])
+                dur_loss_factor = 1.
+                if torch.isnan(dur_loss):
+                    dur_loss_factor = 0.
+
                 pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['x_len'])
                 energy_loss = self.l1_loss(pred['energy'], energy_target.unsqueeze(1), batch['x_len'])
 
                 loss = m1_loss + m2_loss \
-                       + self.train_cfg['dur_loss_factor'] * dur_loss \
+                       + self.train_cfg['dur_loss_factor'] * dur_loss * dur_loss_factor\
                        + self.train_cfg['pitch_loss_factor'] * pitch_loss \
                        + self.train_cfg['energy_loss_factor'] * energy_loss
 

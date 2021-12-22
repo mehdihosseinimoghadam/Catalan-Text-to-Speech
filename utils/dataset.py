@@ -313,7 +313,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     mel = torch.tensor(mel)
     item_id = [b['item_id'] for b in batch]
     mel_lens = [b['mel_len'] for b in batch]
-    mel_lens = torch.tensor(mel_lens)
+    mel_lens = torch.tensor(mel_lens).detach()
 
     dur, pitch, energy = None, None, None
     if 'dur' in batch[0]:
@@ -330,7 +330,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = torch.tensor(energy).float()
 
 
-    print(mel.size(), mel_ext.size())
+    #print(mel.size(), mel_ext.size())
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
             'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy, 'mel_ext': mel_ext}
 

@@ -126,8 +126,8 @@ class TacoTrainer:
             batch = to_device(batch, device=device)
             with torch.no_grad():
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
-                m1_loss = F.l1_loss(m1_hat, batch['mel'])
-                m2_loss = F.l1_loss(m2_hat, batch['mel'])
+                m1_loss = F.l1_loss(m1_hat, batch['mel_ext'])
+                m2_loss = F.l1_loss(m2_hat, batch['mel_ext'])
                 val_loss += m1_loss.item() + m2_loss.item()
             _, att_score = attention_score(attention, batch['mel_len'])
             val_att_score += torch.mean(att_score).item()

@@ -288,7 +288,7 @@ def expand_mel(m, r):
     m_padded = torch.tensor(m_padded)
     mel_ext = []
     for t in range(span, T+span, 1):
-        m_t = m_padded[:, t-span:t+span]
+        m_t = m_padded[:, t-span:t+span+1]
         mel_ext.append(m_t)
     return torch.cat(mel_ext, dim=-1)
 
@@ -329,6 +329,8 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = np.stack(energy)
         energy = torch.tensor(energy).float()
 
+
+    print(mel.size(), mel_ext.size())
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
             'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy, 'mel_ext': mel_ext}
 

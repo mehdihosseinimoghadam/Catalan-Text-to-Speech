@@ -73,8 +73,8 @@ class TacoTrainer:
                 model.train()
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
 
-                m1_loss = F.l1_loss(m1_hat, batch['mel'])
-                m2_loss = F.l1_loss(m2_hat, batch['mel'])
+                m1_loss = F.l1_loss(m1_hat, batch['mel_ext'])
+                m2_loss = F.l1_loss(m2_hat, batch['mel_ext'])
                 loss = m1_loss + m2_loss
                 optimizer.zero_grad()
                 loss.backward()

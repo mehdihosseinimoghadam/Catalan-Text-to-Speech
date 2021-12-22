@@ -1,4 +1,5 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.sampler import Sampler
 from torch.utils.data import Dataset, DataLoader
 from typing import List, Dict, Union, Tuple
@@ -279,6 +280,19 @@ def pad2d(x, max_len):
     return np.pad(x, ((0, 0), (0, max_len - x.shape[-1])), constant_values=-11.5129, mode='constant')
 
 
+def expand_mel(m, r):
+    span = r // 2
+    m_padded = m[:]
+    T = m_padded.shape[-1]
+    m_padded = np.pad(m_padded, ((0, 0), (span, span)), constant_values=-11.5129, mode='constant')
+    m_padded = torch.tensor(m_padded)
+    mel_ext = []
+    for t in range(span, T+span, 1):
+        m_t = m_padded[:, t-span:t+span]
+        mel_ext.append(m_t)
+    return torch.cat(mel_ext, dim=-1)
+
+
 def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dict[str, torch.tensor]:
     x_len = [b['x_len'] for b in batch]
     x_len = torch.tensor(x_len)
@@ -291,6 +305,10 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     if max_spec_len % r != 0:
         max_spec_len += r - max_spec_len % r
     mel = [pad2d(b['mel'], max_spec_len) for b in batch]
+
+    mel_ext = [expand_mel(m, r) for m in mel]
+    mel_ext = pad_sequence(mel_ext, padding_value=-11.5129, batch_first=True)
+
     mel = np.stack(mel)
     mel = torch.tensor(mel)
     item_id = [b['item_id'] for b in batch]
@@ -312,7 +330,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = torch.tensor(energy).float()
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
-            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy}
+            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy, 'mel_ext': mel_ext}
 
 
 class BinnedLengthSampler(Sampler):

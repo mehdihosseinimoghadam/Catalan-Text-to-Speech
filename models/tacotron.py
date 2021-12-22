@@ -247,7 +247,7 @@ class Tacotron(nn.Module):
         mel_outputs, attn_scores = [], []
 
         # Run the decoder loop
-        for t in range(0, steps, self.r):
+        for t in range(0, steps, 1):
             prenet_in = m[:, :, t - 1] if t > 0 else go_frame
             mel_frames, scores, hidden_states, cell_states, context_vec = \
                 self.decoder(encoder_seq, encoder_seq_proj, prenet_in,

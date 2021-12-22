@@ -89,8 +89,8 @@ class ForwardTrainer:
                 m2_loss = self.l1_loss(pred['mel_post'] * batch['mel_probs'][:, None, :T],
                                        batch['mel'] * batch['mel_probs'][:, None, :T], batch['mel_len'])
 
-                dur_loss = self.l1_loss(pred['dur'] * batch['dur_probs'].unsqueeze(1),
-                                        batch['dur'] * batch['dur_probs'].unsqueeze(1), batch['x_len'])
+                dur_loss = self.l1_loss((pred['dur'] * batch['dur_probs']).unsqueeze(1),
+                                        (batch['dur'] * batch['dur_probs']).unsqueeze(1), batch['x_len'])
                 pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['x_len'])
                 energy_loss = self.l1_loss(pred['energy'], energy_target.unsqueeze(1), batch['x_len'])
 

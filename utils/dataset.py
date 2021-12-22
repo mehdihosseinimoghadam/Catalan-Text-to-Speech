@@ -1,4 +1,5 @@
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.sampler import Sampler
 from torch.utils.data import Dataset, DataLoader
 from typing import List, Dict, Union, Tuple
@@ -264,8 +265,11 @@ class ForwardDataset(Dataset):
         dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
+        dur_probs = np.load(str(self.path/'dur_probs'/f'{item_id}.npy'))
+        mel_probs = np.load(str(self.path/'mel_probs'/f'{item_id}.npy'))
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
-                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy}
+                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy,
+                'dur_probs': dur_probs, 'mel_probs': mel_probs}
 
     def __len__(self):
         return len(self.metadata)
@@ -287,7 +291,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     text = np.stack(text)
     text = torch.tensor(text).long()
     spec_lens = [b['mel_len'] for b in batch]
-    max_spec_len = max(spec_lens) + 1
+    max_spec_len = max(spec_lens)
     if max_spec_len % r != 0:
         max_spec_len += r - max_spec_len % r
     mel = [pad2d(b['mel'], max_spec_len) for b in batch]
@@ -296,6 +300,12 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     item_id = [b['item_id'] for b in batch]
     mel_lens = [b['mel_len'] for b in batch]
     mel_lens = torch.tensor(mel_lens)
+
+    if 'dur_probs' in batch[0]:
+        dur_probs = [torch.tensor(b['dur_probs']) for b in batch]
+        mel_probs = [torch.tensor(b['mel_probs']) for b in batch]
+        dur_probs = pad_sequence(dur_probs, batch_first=True)
+        mel_probs = pad_sequence(mel_probs, batch_first=True)
 
     dur, pitch, energy = None, None, None
     if 'dur' in batch[0]:
@@ -312,7 +322,8 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = torch.tensor(energy).float()
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
-            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy}
+            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy,
+            'dur_probs': dur_probs, 'mel_probs': mel_probs}
 
 
 class BinnedLengthSampler(Sampler):

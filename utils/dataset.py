@@ -186,14 +186,14 @@ def get_tts_datasets(path: Path,
                            collate_fn=lambda batch: collate_tts(batch, r),
                            batch_size=batch_size,
                            sampler=train_sampler,
-                           num_workers=0,
+                           num_workers=2,
                            pin_memory=True)
 
     val_set = DataLoader(val_dataset,
                          collate_fn=lambda batch: collate_tts(batch, r),
                          batch_size=batch_size,
                          sampler=None,
-                         num_workers=0,
+                         num_workers=2,
                          shuffle=False,
                          pin_memory=True)
 

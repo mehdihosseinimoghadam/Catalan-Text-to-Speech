@@ -90,7 +90,7 @@ class ForwardTrainer:
                                        batch['mel'] * batch['mel_probs'][:, None, :T], batch['mel_len'])
 
                 #print(batch['dur_probs'])
-                print(batch['dur_probs'].sum())
+                #print(batch['dur_probs'].sum())
                 dur_sum = batch['dur_probs'].sum()
                 if torch.isnan(dur_sum) or torch.isinf(dur_sum):
                     batch['dur_probs'].fill_(0.)

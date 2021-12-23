@@ -89,8 +89,10 @@ class ForwardTrainer:
                 m2_loss = self.l1_loss(pred['mel_post'] * batch['mel_probs'][:, None, :T],
                                        batch['mel'] * batch['mel_probs'][:, None, :T], batch['mel_len'])
 
-                dur_loss = self.l1_loss((pred['dur']).unsqueeze(1),
-                                        (batch['dur']).unsqueeze(1), batch['x_len'])
+                print(batch['dur_probs'])
+                print(batch['dur_probs'].sum())
+                dur_loss = self.l1_loss((pred['dur'] * (batch['dur_probs'] + 0.05)).unsqueeze(1),
+                                        (batch['dur'] * (batch['dur_probs'] + 0.05)).unsqueeze(1), batch['x_len'])
                 dur_loss_factor = 1.
                 if torch.isnan(dur_loss):
                     dur_loss_factor = 0.

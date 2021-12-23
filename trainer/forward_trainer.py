@@ -91,15 +91,11 @@ class ForwardTrainer:
 
                 #print(batch['dur_probs'])
                 #print(batch['dur_probs'].sum())
-                dur_sum = batch['dur_probs'].sum()
-                if torch.isnan(dur_sum) or torch.isinf(dur_sum):
-                    batch['dur_probs'].fill_(0.)
+
+                batch['dur_probs'][batch['dur_probs'] != batch['dur_probs']] = 0.
 
                 dur_loss = self.l1_loss((pred['dur'] * (batch['dur_probs'])).unsqueeze(1),
                                         (batch['dur'] * (batch['dur_probs'])).unsqueeze(1), batch['x_len'])
-                dur_loss_factor = 1.
-                if torch.isnan(dur_loss):
-                    dur_loss_factor = 0.
 
                 pitch_loss = self.l1_loss(pred['pitch'] * batch['dur_probs'][:, None, :],
                                           pitch_target.unsqueeze(1) * batch['dur_probs'][:, None, :], batch['x_len'])
@@ -107,7 +103,7 @@ class ForwardTrainer:
                                            energy_target.unsqueeze(1) * batch['dur_probs'][:, None, :], batch['x_len'])
 
                 loss = m1_loss + m2_loss \
-                       + self.train_cfg['dur_loss_factor'] * dur_loss * dur_loss_factor\
+                       + self.train_cfg['dur_loss_factor'] * dur_loss\
                        + self.train_cfg['pitch_loss_factor'] * pitch_loss \
                        + self.train_cfg['energy_loss_factor'] * energy_loss
 

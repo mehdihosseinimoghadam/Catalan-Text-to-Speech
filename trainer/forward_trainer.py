@@ -93,6 +93,8 @@ class ForwardTrainer:
                 #print(batch['dur_probs'].sum())
 
                 batch['dur_probs'][batch['dur_probs'] != batch['dur_probs']] = 0.
+                batch['dur_probs'][batch['dur_probs'] < 0.1] = 0.
+                batch['mel_probs'][batch['mel_probs'] < 0.1] = 0.
 
                 dur_loss = self.l1_loss((pred['dur'] * (batch['dur_probs'])).unsqueeze(1),
                                         (batch['dur'] * (batch['dur_probs'])).unsqueeze(1), batch['x_len'])

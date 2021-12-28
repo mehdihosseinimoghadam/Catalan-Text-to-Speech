@@ -266,7 +266,7 @@ class Tacotron(nn.Module):
         # Project the encoder outputs to avoid
         # unnecessary matmuls in the decoder loop
         encoder_seq = self.encoder(x)
-        encoder_seq = self.pre_pos_enc(encoder_seq.transpose(1, 2)).transpose(1, 2)
+        #encoder_seq = self.pre_pos_enc(encoder_seq.transpose(1, 2)).transpose(1, 2)
         encoder_seq_proj = self.encoder_proj(encoder_seq)
 
         # Need a couple of lists for outputs

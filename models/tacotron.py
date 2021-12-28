@@ -155,10 +155,10 @@ class Decoder(nn.Module):
         rnn1_cell, rnn2_cell = cell_states
 
         # PreNet for the Attention RNN
-        prenet_out = self.prenet(prenet_in)
+        #prenet_out = self.prenet(prenet_in)
 
         # Compute the Attention RNN hidden state
-        attn_rnn_in = torch.cat([context_vec, prenet_out], dim=-1)
+        attn_rnn_in = torch.cat([context_vec, prenet_in], dim=-1)
         attn_hidden = self.attn_rnn(attn_rnn_in.squeeze(1), attn_hidden)
 
         # Compute the attention scores
@@ -223,7 +223,7 @@ class Tacotron(nn.Module):
         self.postnet = CBHG(postnet_k, n_mels, postnet_dims, [256, 80], num_highways)
         self.post_proj = nn.Linear(postnet_dims * 2, n_mels, bias=False)
         self.pre_pos_enc = PositionalEncoding(2 * encoder_dims)
-        self.pos_enc = PositionalEncoding(n_mels)
+        self.pos_enc = PositionalEncoding(128)
 
         self.init_model()
 
@@ -258,7 +258,7 @@ class Tacotron(nn.Module):
         cell_states = (rnn1_cell, rnn2_cell)
 
         # <GO> Frame for start of decoder loop
-        go_frame = torch.zeros(batch_size, self.n_mels, device=device)
+        go_frame = torch.zeros(batch_size, 128, device=device)
 
         # Need an initial context vector
         context_vec = torch.zeros(batch_size, self.decoder_dims, device=device)
@@ -274,9 +274,11 @@ class Tacotron(nn.Module):
 
         # Run the decoder loop
 
-        m_pos = self.pos_enc(m)
+        prenet_in_all = self.decoder.prenet(m.transpose(1, 2))
+        prenet_in_all = self.pos_enc(prenet_in_all.transpose(1, 2)).transpose(1, 2)
+
         for t in range(0, steps, self.r):
-            prenet_in = m_pos[:, :, t - 1] if t > 0 else go_frame
+            prenet_in = prenet_in_all[:, t - 1, :] if t > 0 else go_frame
             mel_frames, scores, hidden_states, cell_states, context_vec = \
                 self.decoder(encoder_seq, encoder_seq_proj, prenet_in,
                              hidden_states, cell_states, context_vec, t)

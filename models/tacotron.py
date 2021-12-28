@@ -1,3 +1,4 @@
+import math
 from pathlib import Path
 from typing import Union, Dict, Any, Tuple
 
@@ -7,6 +8,28 @@ import torch.nn.functional as F
 
 from models.common_layers import CBHG
 from utils.text.symbols import phonemes
+
+
+
+class PositionalEncoding(torch.nn.Module):
+
+    def __init__(self, d_model: int, dropout=0.1, max_len=5000) -> None:
+        super(PositionalEncoding, self).__init__()
+        self.dropout = torch.nn.Dropout(p=dropout)
+        self.scale = torch.nn.Parameter(torch.ones(1))
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(
+            0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(1, 2)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:         # shape: [T, N]
+        x = x + self.scale * self.pe[:, :, :x.size(-1)]
+        return self.dropout(x)
 
 
 class Encoder(nn.Module):
@@ -199,6 +222,7 @@ class Tacotron(nn.Module):
         self.decoder = Decoder(n_mels, decoder_dims, lstm_dims)
         self.postnet = CBHG(postnet_k, n_mels, postnet_dims, [256, 80], num_highways)
         self.post_proj = nn.Linear(postnet_dims * 2, n_mels, bias=False)
+        self.pos_enc = PositionalEncoding(n_mels)
 
         self.init_model()
 
@@ -247,8 +271,10 @@ class Tacotron(nn.Module):
         mel_outputs, attn_scores = [], []
 
         # Run the decoder loop
+
+        m_pos = self.pos_enc(m)
         for t in range(0, steps, self.r):
-            prenet_in = m[:, :, t - 1] if t > 0 else go_frame
+            prenet_in = m_pos[:, :, t - 1] if t > 0 else go_frame
             mel_frames, scores, hidden_states, cell_states, context_vec = \
                 self.decoder(encoder_seq, encoder_seq_proj, prenet_in,
                              hidden_states, cell_states, context_vec, t)

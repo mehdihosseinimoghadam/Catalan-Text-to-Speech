@@ -28,7 +28,7 @@ class PositionalEncoding(torch.nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:         # shape: [T, N]
-        x = x + self.scale * self.pe[:, :, :x.size(-1)]
+        x = x + self.scale * self.pe[..., :x.size(-1)]
         return self.dropout(x)
 
 
@@ -222,6 +222,7 @@ class Tacotron(nn.Module):
         self.decoder = Decoder(n_mels, decoder_dims, lstm_dims)
         self.postnet = CBHG(postnet_k, n_mels, postnet_dims, [256, 80], num_highways)
         self.post_proj = nn.Linear(postnet_dims * 2, n_mels, bias=False)
+        self.pre_pos_enc = PositionalEncoding(2 * encoder_dims)
         self.pos_enc = PositionalEncoding(n_mels)
 
         self.init_model()
@@ -265,6 +266,7 @@ class Tacotron(nn.Module):
         # Project the encoder outputs to avoid
         # unnecessary matmuls in the decoder loop
         encoder_seq = self.encoder(x)
+        encoder_seq = self.pre_pos_enc(encoder_seq.transpose(1, 2)).transpose(1, 2)
         encoder_seq_proj = self.encoder_proj(encoder_seq)
 
         # Need a couple of lists for outputs

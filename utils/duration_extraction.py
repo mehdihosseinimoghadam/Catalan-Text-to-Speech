@@ -4,6 +4,8 @@ import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse.csgraph import dijkstra
 
+from utils.text.tokenizer import Tokenizer
+
 
 def to_node_index(i: int, j: int, cols: int) -> int:
     return cols * i + j
@@ -59,6 +61,14 @@ def extract_durations_with_dijkstra(seq: np.array,
     top left to bottom right.
     """
 
+    tokenizer = Tokenizer()
+    text = tokenizer.decode(seq.cpu().numpy())
+
+    #for j in range(mel_len):
+    #    for i in range(len(seq)):
+    #        if text[i] in ' !?,:.':
+    #            att[j, i] = att[j, i] + 0.1
+    print(text)
     path_probs = 1.-att[:mel_len, :]
     adj_matrix = to_adj_matrix(path_probs)
     dist_matrix, predecessors = dijkstra(csgraph=adj_matrix, directed=True,
@@ -84,6 +94,12 @@ def extract_durations_with_dijkstra(seq: np.array,
     for j in mel_text.values():
         durations[j] += 1
 
+    for j in range(mel_len):
+        m_ind = att[j, :].argmax(axis=0)
+        i = mel_text[j]
+        #print(text[m_ind], m_ind, mel_text[j], att[j, i])
+
+    #exit()
     return durations
 
 

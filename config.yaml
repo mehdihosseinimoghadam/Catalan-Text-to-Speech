@@ -1,9 +1,9 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'ljspeech_tts'
+tts_model_id: 'bild_fastpitch_att_tts'
 data_path: 'data/'                                        # output data path
 
-tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
+tts_model: 'fast_pitch'                             # choices: [forward_tacotron, fast_pitch]
 
 
 dsp:
@@ -38,9 +38,9 @@ preprocessing:
 
   seed: 42
   n_val: 200
-  language: 'en-us'
-  cleaner_name: 'english_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
-  use_phonemes: True                 # whether to phonemize the text
+  language: 'de'
+  cleaner_name: 'no_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
+  use_phonemes: False                 # whether to phonemize the text
                                      # if set to False, you have to provide the phonemized text yourself
   min_text_len: 2
   extract_durations_with_dijkstra: True    # slower but much more robust than simply counting attention peaks
@@ -149,16 +149,16 @@ fast_pitch:
     energy_strength: 1.0
 
     d_model: 256
-    conv1_kernel: 9
+    conv1_kernel: 1
     conv2_kernel: 1
 
-    prenet_layers: 4
-    prenet_heads: 2
+    prenet_layers: 1
+    prenet_heads: 1
     prenet_fft: 1024
     prenet_dropout: 0.1
 
-    postnet_layers: 4
-    postnet_heads: 2
+    postnet_layers: 1
+    postnet_heads: 1
     postnet_fft: 1024
     postnet_dropout: 0.1
 

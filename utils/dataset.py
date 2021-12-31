@@ -301,6 +301,8 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     mel_lens = [b['mel_len'] for b in batch]
     mel_lens = torch.tensor(mel_lens)
 
+    dur_probs = None
+    mel_probs = None
     if 'dur_probs' in batch[0]:
         dur_probs = [torch.tensor(b['dur_probs']) for b in batch]
         mel_probs = [torch.tensor(b['mel_probs']) for b in batch]

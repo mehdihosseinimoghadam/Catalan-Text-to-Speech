@@ -256,12 +256,21 @@ class ForwardDataset(Dataset):
         self.tokenizer = tokenizer
 
     def __getitem__(self, index: int) -> Dict[str, torch.tensor]:
+
+        mean_speed = 0.19736238619670557
+        mean_dur = 1. / mean_speed
+
         item_id = self.metadata[index]
         text = self.text_dict[item_id]
         x = self.tokenizer(text)
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
         dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
+
+        m_d = np.sum(dur) / len(text)
+        norm = mean_dur / m_d
+        dur = norm * dur
+
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),

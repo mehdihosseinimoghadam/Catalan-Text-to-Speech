@@ -269,12 +269,13 @@ class ForwardDataset(Dataset):
 
         m_d = np.sum(dur) / len(text)
         norm = mean_dur / m_d
-        dur = norm * dur
+
+        dur_target = norm * dur
 
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
-                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy}
+                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy, 'dur_target': dur_target}
 
     def __len__(self):
         return len(self.metadata)
@@ -311,6 +312,9 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         dur = [pad1d(b['dur'][:max_x_len], max_x_len) for b in batch]
         dur = np.stack(dur)
         dur = torch.tensor(dur).float()
+        dur_target = [pad1d(b['dur_target'][:max_x_len], max_x_len) for b in batch]
+        dur_target = np.stack(dur_target)
+        dur_target = torch.tensor(dur_target).float()
     if 'pitch' in batch[0]:
         pitch = [pad1d(b['pitch'][:max_x_len], max_x_len) for b in batch]
         pitch = np.stack(pitch)
@@ -321,7 +325,7 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = torch.tensor(energy).float()
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
-            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy}
+            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy, 'dur_target': dur_target}
 
 
 class BinnedLengthSampler(Sampler):

@@ -257,8 +257,7 @@ class ForwardDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict[str, torch.tensor]:
 
-        mean_speed = 0.19736238619670557
-        mean_dur = 1. / mean_speed
+        mean_median = 4.922013651877133
 
         item_id = self.metadata[index]
         text = self.text_dict[item_id]
@@ -267,10 +266,11 @@ class ForwardDataset(Dataset):
         mel_len = mel.shape[-1]
         dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
 
-        m_d = np.sum(dur) / len(text)
-        norm = mean_dur / m_d
+        median = np.median(dur)
+        factor = mean_median / median
+        dur_target = dur * factor
 
-        dur_target = norm * dur
+        o_median = np.median(dur_target)
 
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))

@@ -110,9 +110,10 @@ class ForwardTacotron(nn.Module):
                  prenet_num_highways: int,
                  postnet_dropout: float,
                  n_mels: int,
-                 emb_rnn_checkpoint=None, #'/home/sysgen/chris/workspace/NLG/char-rnn.pt',
+                 emb_rnn_checkpoint='/home/sysgen/chris/workspace/NLG/char-rnn.pt',
                  padding_value=-11.5129):
         super().__init__()
+        self.embedding = nn.Embedding(num_chars, embed_dims)
 
         embed_dims = 1024
         self.emb_rnn = RNN(input_size=num_chars, output_size=num_chars, hidden_size=1024)
@@ -182,8 +183,7 @@ class ForwardTacotron(nn.Module):
         pitch_hat = self.pitch_pred(x).transpose(1, 2)
         energy_hat = self.energy_pred(x).transpose(1, 2)
 
-        #x = self.embedding(x)
-        x = self.emb_rnn.embed(x)
+        x = self.embedding(x)
         x = x.transpose(1, 2)
         x = self.prenet(x)
 
@@ -260,7 +260,7 @@ class ForwardTacotron(nn.Module):
                       dur_hat: torch.Tensor,
                       pitch_hat: torch.Tensor,
                       energy_hat: torch.Tensor) -> Dict[str, torch.Tensor]:
-        x = self.emb_rnn.embed(x)
+        x = self.embedding(x)
         x = x.transpose(1, 2)
         x = self.prenet(x)
 

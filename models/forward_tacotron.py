@@ -115,7 +115,6 @@ class ForwardTacotron(nn.Module):
         super().__init__()
         self.embedding = nn.Embedding(num_chars, embed_dims)
 
-        embed_dims = 1024
         self.emb_rnn = RNN(input_size=num_chars, output_size=num_chars, hidden_size=1024)
         if emb_rnn_checkpoint is not None:
             print(f'loading emb rnn: {emb_rnn_checkpoint}')

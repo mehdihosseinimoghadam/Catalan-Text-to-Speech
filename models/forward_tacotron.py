@@ -16,6 +16,7 @@ class SeriesPredictor(nn.Module):
     def __init__(self, num_chars, emb_dim=64, conv_dims=256, rnn_dims=64, dropout=0.5):
         super().__init__()
         self.embedding = Embedding(num_chars, emb_dim)
+        self.embedding.requires_grad = False
         self.convs = torch.nn.ModuleList([
             BatchNormConv(emb_dim, conv_dims, 5, relu=True),
             BatchNormConv(conv_dims, conv_dims, 5, relu=True),
@@ -87,6 +88,7 @@ class ForwardTacotron(nn.Module):
         self.rnn_dims = rnn_dims
         self.padding_value = padding_value
         self.embedding = nn.Embedding(num_chars, embed_dims)
+        self.embedding.requires_grad = False
         self.lr = LengthRegulator()
         self.dur_pred = SeriesPredictor(num_chars=num_chars,
                                         emb_dim=series_embed_dims,

@@ -97,6 +97,7 @@ class ForwardTrainer:
 
                 optimizer.zero_grad()
                 loss.backward()
+
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
                                                self.train_cfg['clip_grad_norm'])
                 optimizer.step()

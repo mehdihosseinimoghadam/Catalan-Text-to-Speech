@@ -15,20 +15,21 @@ class Aligner(nn.Module):
     def __init__(self, num_chars):
         super().__init__()
         self.register_buffer('step', torch.zeros(1, dtype=torch.long))
-        self.embedding = Embedding(num_embeddings=num_chars, embedding_dim=256)
+        self.embedding = Embedding(num_embeddings=num_chars, embedding_dim=64)
         self.text_encoder = nn.Sequential(
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3),
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3),
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3)
+            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3),
+            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3),
+            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3)
         )
         self.mel_encoder = nn.Sequential(
-            nn.Conv1d(in_channels=80, out_channels=256, kernel_size=3),
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3),
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3)
+            nn.Conv1d(in_channels=80, out_channels=64, kernel_size=3),
+            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3),
+            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3)
         )
 
     def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
-
+        if self.training:
+            self.step += 1
         x = self.embedding(x)
         x = x.transpose(1, 2)
         x = self.text_encoder(x)

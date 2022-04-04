@@ -147,6 +147,7 @@ def get_tts_datasets(path: Path,
     text_dict = unpickle_binary(path/'text_dict.pkl')
 
     train_data = filter_max_len(train_data, max_mel_len)
+    train_data = filter_min_len(train_data, 300)
     val_data = filter_max_len(val_data, max_mel_len)
     train_len_original = len(train_data)
 
@@ -203,6 +204,11 @@ def filter_max_len(dataset: List[tuple], max_mel_len: int) -> List[tuple]:
     if max_mel_len is None:
         return dataset
     return [(id, len) for id, len in dataset if len <= max_mel_len]
+
+def filter_min_len(dataset: List[tuple], min_mel_len: int) -> List[tuple]:
+    if min_mel_len is None:
+        return dataset
+    return [(id, len) for id, len in dataset if len >= min_mel_len]
 
 
 def filter_bad_attentions(dataset: List[tuple],

@@ -24,7 +24,7 @@ class ForwardSumLoss(torch.nn.Module):
     def __init__(self, blank_logprob=-1):
         super().__init__()
         self.log_softmax = torch.nn.LogSoftmax(dim=3)
-        self.ctc_loss = torch.nn.CTCLoss(zero_infinity=True)
+        self.ctc_loss = torch.nn.CTCLoss()
         self.blank_logprob = blank_logprob
 
     def forward(self, attn_logprob, in_lens, out_lens):
@@ -34,12 +34,13 @@ class ForwardSumLoss(torch.nn.Module):
 
         total_loss = 0.0
         for bid in range(attn_logprob.shape[0]):
-            target_seq = torch.arange(1, key_lens[bid] + 1).unsqueeze(0)
-            ql = min(query_lens[bid], attn_logprob_padded.size(1))
-            kl = key_lens[bid]
+            target_seq = torch.arange(1, key_lens[bid] + 1).unsqueeze(0).to(attn_logprob.device)
+            ql = min(int(query_lens[bid]), int(attn_logprob_padded.size(1)))
+            kl = min(int(key_lens[bid]), int(attn_logprob_padded.size(2)))
             curr_logprob = attn_logprob_padded[bid][:ql, :key_lens[bid] + 1]
             curr_logprob = curr_logprob.unsqueeze(1)
             curr_logprob = curr_logprob.log_softmax(dim=-1)
+            print(curr_logprob.size(), ql, kl)
             loss = self.ctc_loss(
                 curr_logprob,
                 target_seq,
@@ -47,6 +48,7 @@ class ForwardSumLoss(torch.nn.Module):
                 target_lengths=torch.full((1, 1), kl),
             )
             total_loss = total_loss + loss
+            del loss
 
         total_loss = total_loss / attn_logprob.shape[0]
         return total_loss
@@ -105,21 +107,17 @@ class TacoTrainer:
                 batch = to_device(batch, device=device)
                 start = time.time()
                 model.train()
-                attn = model(batch['x'], batch['mel'])
+                attn = model(batch['x'].detach(), batch['mel'].detach())
 
                 loss = self.loss_fn(attn, in_lens=batch['x_len'], out_lens=batch['mel_len'])
 
-
-                #loss = F.l1_loss(attention, attention)
-
                 optimizer.zero_grad()
-
                 if not torch.isnan(loss) or torch.isinf(loss):
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(model.parameters(),
                                                    self.train_cfg['clip_grad_norm'])
-                    optimizer.step()
-                    loss_avg.add(loss.item())
+                optimizer.step()
+
                 step = model.get_step()
                 k = step // 1000
 
@@ -135,7 +133,7 @@ class TacoTrainer:
                 if step % self.train_cfg['plot_every'] == 0:
                     self.generate_plots(model, session)
 
-                _, att_score = attention_score(attn, batch['mel_len'])
+                _, att_score = attention_score(attn.softmax(-1), batch['mel_len'])
                 att_score = torch.mean(att_score)
                 self.writer.add_scalar('Attention_Score/train', att_score, model.get_step())
                 self.writer.add_scalar('Loss/train', loss, model.get_step())
@@ -145,9 +143,6 @@ class TacoTrainer:
 
                 stream(msg)
 
-            val_loss, val_att_score = self.evaluate(model, session.val_set)
-            self.writer.add_scalar('Loss/val', val_loss, model.get_step())
-            self.writer.add_scalar('Attention_Score/val', val_att_score, model.get_step())
             save_checkpoint(model=model, optim=optimizer, config=self.config,
                             path=self.paths.taco_checkpoints / 'latest_model.pt')
 
@@ -155,30 +150,13 @@ class TacoTrainer:
             duration_avg.reset()
             print(' ')
 
-    def evaluate(self, model: Tacotron, val_set: Dataset) -> Tuple[float, float]:
-        model.eval()
-        val_loss = 0
-        val_att_score = 0
-        device = next(model.parameters()).device
-        for i, batch in enumerate(val_set, 1):
-            batch = to_device(batch, device=device)
-            with torch.no_grad():
-                m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
-                m1_loss = F.l1_loss(m1_hat, batch['mel'])
-                m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                val_loss += m1_loss.item() + m2_loss.item()
-            _, att_score = attention_score(attention, batch['mel_len'])
-            val_att_score += torch.mean(att_score).item()
-
-        return val_loss / len(val_set), val_att_score / len(val_set)
-
     @ignore_exception
     def generate_plots(self, model: Tacotron, session: TTSSession) -> None:
         model.eval()
         device = next(model.parameters()).device
         batch = session.val_sample
         batch = to_device(batch, device=device)
-        att = model(batch['x'], batch['mel'])
+        att = model(batch['x'], batch['mel']).softmax(-1)
         att = np_now(att)[0]
 
         att_fig = plot_attention(att)

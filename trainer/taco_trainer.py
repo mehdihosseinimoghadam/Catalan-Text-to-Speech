@@ -36,14 +36,15 @@ class ForwardSumLoss(torch.nn.Module):
         for bid in range(attn_logprob.shape[0]):
             target_seq = torch.arange(1, key_lens[bid] + 1).unsqueeze(0)
             ql = min(query_lens[bid], attn_logprob_padded.size(1))
+            kl = key_lens[bid]
             curr_logprob = attn_logprob_padded[bid][:ql, :key_lens[bid] + 1]
             curr_logprob = curr_logprob.unsqueeze(1)
             curr_logprob = curr_logprob.log_softmax(dim=-1)
             loss = self.ctc_loss(
                 curr_logprob,
                 target_seq,
-                input_lengths=torch.tensor([ql]),
-                target_lengths=key_lens[bid : bid + 1],
+                input_lengths=torch.full((1, 1), ql),
+                target_lengths=torch.full((1, 1), kl),
             )
             total_loss = total_loss + loss
 
@@ -106,23 +107,25 @@ class TacoTrainer:
                 model.train()
                 attn = model(batch['x'], batch['mel'])
 
-                loss = self.loss_fn(attn, in_lens=torch.tensor(batch['x_len']), out_lens=torch.tensor(batch['mel_len']))
+                loss = self.loss_fn(attn, in_lens=batch['x_len'], out_lens=batch['mel_len'])
 
 
                 #loss = F.l1_loss(attention, attention)
 
                 optimizer.zero_grad()
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(),
-                                               self.train_cfg['clip_grad_norm'])
-                optimizer.step()
-                loss_avg.add(loss.item())
+
+                if not torch.isnan(loss) or torch.isinf(loss):
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(),
+                                                   self.train_cfg['clip_grad_norm'])
+                    optimizer.step()
+                    loss_avg.add(loss.item())
                 step = model.get_step()
                 k = step // 1000
 
                 duration_avg.add(time.time() - start)
                 speed = 1. / duration_avg.get()
-                msg = f'| Epoch: {e}/{epochs} ({i}/{total_iters}) | Loss: {loss_avg.get():#.4} ' \
+                msg = f'| Epoch: {e}/{epochs} ({i}/{total_iters}) | Loss: {loss.item():#.4} ' \
                       f'| {speed:#.2} steps/s | Step: {k}k | '
 
                 if step % self.train_cfg['checkpoint_every'] == 0:

@@ -48,7 +48,6 @@ class ForwardSumLoss(torch.nn.Module):
                 target_lengths=torch.full((1, 1), kl),
             )
             total_loss = total_loss + loss
-            del loss
 
         total_loss = total_loss / attn_logprob.shape[0]
         return total_loss

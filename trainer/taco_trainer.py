@@ -34,13 +34,13 @@ class ForwardSumLoss(torch.nn.Module):
 
         total_loss = 0.0
         for bid in range(attn_logprob.shape[0]):
-            target_seq = torch.arange(1, key_lens[bid] + 1).unsqueeze(0).to(attn_logprob.device)
             ql = min(int(query_lens[bid]), int(attn_logprob_padded.size(1)))
             kl = min(int(key_lens[bid]), int(attn_logprob_padded.size(2)))
+            target_seq = torch.arange(1, kl + 1).unsqueeze(0).to(attn_logprob.device)
             curr_logprob = attn_logprob_padded[bid][:ql, :key_lens[bid] + 1]
             curr_logprob = curr_logprob.unsqueeze(1)
             curr_logprob = curr_logprob.log_softmax(dim=-1)
-            print(curr_logprob.size(), ql, kl)
+            #print(curr_logprob.size(), target_seq.size(), ql, kl)
             loss = self.ctc_loss(
                 curr_logprob,
                 target_seq,

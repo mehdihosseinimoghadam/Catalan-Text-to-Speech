@@ -4,9 +4,10 @@ import torch
 import torch.nn.functional as F
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset
-#from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 from typing import Tuple, Dict, Any
 
+from models.aligner import Aligner
 from models.tacotron import Tacotron
 from trainer.common import Averager, TTSSession, to_device, np_now
 from utils.checkpoints import save_checkpoint
@@ -17,6 +18,37 @@ from utils.dsp import DSP
 from utils.files import parse_schedule
 from utils.metrics import attention_score
 from utils.paths import Paths
+
+
+class ForwardSumLoss(torch.nn.Module):
+    def __init__(self, blank_logprob=-1):
+        super().__init__()
+        self.log_softmax = torch.nn.LogSoftmax(dim=3)
+        self.ctc_loss = torch.nn.CTCLoss(zero_infinity=True)
+        self.blank_logprob = blank_logprob
+
+    def forward(self, attn_logprob, in_lens, out_lens):
+        key_lens = in_lens
+        query_lens = out_lens
+        attn_logprob_padded = torch.nn.functional.pad(input=attn_logprob, pad=(1, 0), value=self.blank_logprob)
+
+        total_loss = 0.0
+        for bid in range(attn_logprob.shape[0]):
+            target_seq = torch.arange(1, key_lens[bid] + 1).unsqueeze(0)
+            ql = min(query_lens[bid], attn_logprob_padded.size(1))
+            curr_logprob = attn_logprob_padded[bid][:ql, :key_lens[bid] + 1]
+            curr_logprob = curr_logprob.unsqueeze(1)
+            curr_logprob = curr_logprob.log_softmax(dim=-1)
+            loss = self.ctc_loss(
+                curr_logprob,
+                target_seq,
+                input_lengths=torch.tensor([ql]),
+                target_lengths=key_lens[bid : bid + 1],
+            )
+            total_loss = total_loss + loss
+
+        total_loss = total_loss / attn_logprob.shape[0]
+        return total_loss
 
 
 class TacoTrainer:
@@ -30,9 +62,10 @@ class TacoTrainer:
         self.config = config
         self.train_cfg = config['tacotron']['training']
         self.writer = SummaryWriter(log_dir=paths.taco_log, comment='v1')
+        self.loss_fn = ForwardSumLoss()
 
     def train(self,
-              model: Tacotron,
+              model: Aligner,
               optimizer: Optimizer) -> None:
         tts_schedule = self.train_cfg['schedule']
         tts_schedule = parse_schedule(tts_schedule)
@@ -71,11 +104,13 @@ class TacoTrainer:
                 batch = to_device(batch, device=device)
                 start = time.time()
                 model.train()
-                m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
+                attn = model(batch['x'], batch['mel'])
 
-                m1_loss = F.l1_loss(m1_hat, batch['mel'])
-                m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss
+                loss = self.loss_fn(attn, in_lens=torch.tensor(batch['x_len']), out_lens=torch.tensor(batch['mel_len']))
+
+
+                #loss = F.l1_loss(attention, attention)
+
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
@@ -97,7 +132,7 @@ class TacoTrainer:
                 if step % self.train_cfg['plot_every'] == 0:
                     self.generate_plots(model, session)
 
-                _, att_score = attention_score(attention, batch['mel_len'])
+                _, att_score = attention_score(attn, batch['mel_len'])
                 att_score = torch.mean(att_score)
                 self.writer.add_scalar('Attention_Score/train', att_score, model.get_step())
                 self.writer.add_scalar('Loss/train', loss, model.get_step())
@@ -140,47 +175,9 @@ class TacoTrainer:
         device = next(model.parameters()).device
         batch = session.val_sample
         batch = to_device(batch, device=device)
-        m1_hat, m2_hat, att = model(batch['x'], batch['mel'])
+        att = model(batch['x'], batch['mel'])
         att = np_now(att)[0]
-        m1_hat = np_now(m1_hat)[0, :600, :]
-        m2_hat = np_now(m2_hat)[0, :600, :]
-        m_target = np_now(batch['mel'])[0, :600, :]
 
         att_fig = plot_attention(att)
-        m1_hat_fig = plot_mel(m1_hat)
-        m2_hat_fig = plot_mel(m2_hat)
-        m_target_fig = plot_mel(m_target)
 
         self.writer.add_figure('Ground_Truth_Aligned/attention', att_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/target', m_target_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/linear', m1_hat_fig, model.step)
-        self.writer.add_figure('Ground_Truth_Aligned/postnet', m2_hat_fig, model.step)
-
-        m2_hat_wav = self.dsp.griffinlim(m2_hat)
-        target_wav = self.dsp.griffinlim(m_target)
-
-        self.writer.add_audio(
-            tag='Ground_Truth_Aligned/target_wav', snd_tensor=target_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-        self.writer.add_audio(
-            tag='Ground_Truth_Aligned/postnet_wav', snd_tensor=m2_hat_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-
-        m1_hat, m2_hat, att = model.generate(batch['x'][0:1], steps=batch['mel_len'][0] + 20)
-        att_fig = plot_attention(att)
-        m1_hat_fig = plot_mel(m1_hat)
-        m2_hat_fig = plot_mel(m2_hat)
-
-        self.writer.add_figure('Generated/attention', att_fig, model.step)
-        self.writer.add_figure('Generated/target', m_target_fig, model.step)
-        self.writer.add_figure('Generated/linear', m1_hat_fig, model.step)
-        self.writer.add_figure('Generated/postnet', m2_hat_fig, model.step)
-
-        m2_hat_wav = self.dsp.griffinlim(m2_hat)
-
-        self.writer.add_audio(
-            tag='Generated/target_wav', snd_tensor=target_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)
-        self.writer.add_audio(
-            tag='Generated/postnet_wav', snd_tensor=m2_hat_wav,
-            global_step=model.step, sample_rate=self.dsp.sample_rate)

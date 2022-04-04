@@ -8,6 +8,7 @@ import tqdm
 from torch import optim
 from torch.utils.data.dataloader import DataLoader
 
+from models.aligner import Aligner
 from models.tacotron import Tacotron
 from trainer.common import to_device, np_now
 from trainer.taco_trainer import TacoTrainer
@@ -19,6 +20,7 @@ from utils.duration_extraction import extract_durations_per_count, extract_durat
 from utils.files import pickle_binary, unpickle_binary, read_config
 from utils.metrics import attention_score
 from utils.paths import Paths
+from utils.text.symbols import phonemes
 from utils.text.tokenizer import Tokenizer
 
 
@@ -183,8 +185,7 @@ if __name__ == '__main__':
 
     # Instantiate Tacotron Model
     print('\nInitialising Tacotron Model...\n')
-    model = Tacotron.from_config(config).to(device)
-
+    model = Aligner(num_chars=len(phonemes))
     optimizer = optim.Adam(model.parameters())
     restore_checkpoint(model=model, optim=optimizer,
                        path=paths.taco_checkpoints / 'latest_model.pt',

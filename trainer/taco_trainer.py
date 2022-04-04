@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 from typing import Tuple, Dict, Any
 
 from models.tacotron import Tacotron

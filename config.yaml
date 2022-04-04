@@ -1,9 +1,9 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'ljspeech_tts'
+tts_model_id: 'bild_rp_taco_tts'
 data_path: 'data/'                                        # output data path
 
-tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
+tts_model: 'forward_tacotron'                              # choices: [forward_tacotron, fast_pitch]
 
 
 dsp:
@@ -25,7 +25,7 @@ dsp:
   trim_long_silences: False             # Whether to reduce long silence using WebRTC Voice Activity Detector
   vad_window_length: 30                 # In milliseconds
   vad_moving_average_width: 8
-  vad_max_silence_length: 12
+  vad_max_silence_length: 2
   vad_sample_rate: 16000
 
   # vocoder

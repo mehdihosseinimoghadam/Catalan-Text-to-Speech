@@ -53,13 +53,21 @@ def to_adj_matrix(mat: np.array) -> csr_matrix:
 
 def extract_durations_with_dijkstra(seq: np.array,
                                     att: np.array,
-                                    mel_len: int) -> np.array:
+                                    mel_len: int,
+                                    improve=True) -> np.array:
     """
     Extracts durations from the attention matrix by finding the shortest monotonic path from
     top left to bottom right.
     """
+    att = att[...]
+    if improve:
+        for i in range(mel_len):
+            for j in range(len(seq)):
+                if seq[j] == 10:
+                    att[i, j] = att[i, j] + 0.1
 
     path_probs = 1.-att[:mel_len, :]
+
     adj_matrix = to_adj_matrix(path_probs)
     dist_matrix, predecessors = dijkstra(csgraph=adj_matrix, directed=True,
                                          indices=0, return_predecessors=True)
@@ -77,14 +85,19 @@ def extract_durations_with_dijkstra(seq: np.array,
     durations = np.zeros(seq.shape[0], dtype=np.int32)
 
     # collect indices (mel, text) along the path
+
+    bad_att = []
     for node_index in path:
         i, j = from_node_index(node_index, cols)
         mel_text[i] = j
+        if seq[j] != 10 and att[i, j] < 0.3:
+            bad_att.append(att[i, j])
 
     for j in mel_text.values():
         durations[j] += 1
 
-    return durations
+
+    return durations, len(bad_att)
 
 
 def extract_durations_per_count(seq: np.array,

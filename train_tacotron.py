@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Tuple
 
 import torch
+import tqdm
 from torch import optim
 from torch.utils.data.dataloader import DataLoader
 
@@ -18,6 +19,7 @@ from utils.duration_extraction import extract_durations_per_count, extract_durat
 from utils.files import pickle_binary, unpickle_binary, read_config
 from utils.metrics import attention_score
 from utils.paths import Paths
+from utils.text.tokenizer import Tokenizer
 
 
 def normalize_values(phoneme_val):
@@ -104,6 +106,7 @@ def create_align_features(model: Tacotron,
     assert model.r == 1, f'Reduction factor of tacotron must be 1 for creating alignment features! ' \
                          f'Reduction factor was: {model.r}'
     model.eval()
+    #model.decoder.prenet.train()
     device = next(model.parameters()).device  # use same device as model parameters
     iters = len(val_set) + len(train_set)
     dataset = itertools.chain(train_set, val_set)
@@ -116,19 +119,35 @@ def create_align_features(model: Tacotron,
         print('Extracting durations using attention peak counts...')
         dur_extraction_func = extract_durations_per_count
 
-    for i, batch in enumerate(dataset, 1):
+    for i, batch in enumerate(tqdm.tqdm(dataset, total=11000), 1):
         batch = to_device(batch, device=device)
         with torch.no_grad():
             _, _, att_batch = model(batch['x'], batch['mel'])
         align_score, sharp_score = attention_score(att_batch, batch['mel_len'], r=1)
         att_batch = np_now(att_batch)
-        seq, att, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
+        seq, att_orig, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
         align_score, sharp_score = float(align_score[0]), float(sharp_score[0])
         att_score_dict[item_id] = (align_score, sharp_score)
-        durs = dur_extraction_func(seq, att, mel_len)
+
+        att = att_orig.copy()
+        durs, mean_att = extract_durations_with_dijkstra(seq, att, mel_len, improve=False)
+        att = att_orig.copy()
+        durs_2, mean_att_2 = extract_durations_with_dijkstra(seq, att, mel_len, improve=True)
+
+        text = Tokenizer().decode([int(c) for c in seq])
+        print()
+        print(item_id, sharp_score)
+        print(text)
+
+        for t, d, d2 in zip(text, durs, durs_2):
+            print(t, d, d2)
+
+        print('sharp score:', sharp_score)
+        print('bad att:', mean_att)
+        print('bad att 2:', mean_att_2)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
-        np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
+        np.save(str(paths.alg / f'{item_id}.npy'), durs_2, allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
         stream(msg)

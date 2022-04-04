@@ -134,7 +134,41 @@ class DSP:
         audio_mask = np.round(audio_mask).astype(np.bool)
         audio_mask[:] = binary_dilation(audio_mask[:], np.ones(self.vad_max_silence_length + 1))
         audio_mask = np.repeat(audio_mask, samples_per_window)
-        return wav[audio_mask]
+        sil_mask = (1 - audio_mask).astype(np.bool)
+
+        size = len(sil_mask[sil_mask!=0])
+        x = np.linspace(0, len(wav), len(wav))
+        x = np.sin(x).astype(np.float32) * 0.
+        #x = np.sin(x).astype(np.float32)
+        wav[sil_mask] = x[sil_mask]
+        print(wav[sil_mask])
+        print(x[sil_mask])
+        print(x)
+        return wav
+
+    def get_voice_mask(self, wav: np.array) -> np.array:
+        int16_max = (2 ** 15) - 1
+        samples_per_window = (self.vad_window_length * self.vad_sample_rate) // 1000
+        wav = wav[:len(wav) - (len(wav) % samples_per_window)]
+        pcm_wave = struct.pack("%dh" % len(wav), *(np.round(wav * int16_max)).astype(np.int16))
+        voice_flags = []
+        vad = webrtcvad.Vad(mode=3)
+        for window_start in range(0, len(wav), samples_per_window):
+            window_end = window_start + samples_per_window
+            voice_flags.append(vad.is_speech(pcm_wave[window_start * 2:window_end * 2],
+                                             sample_rate=self.vad_sample_rate))
+        voice_flags = np.array(voice_flags)
+        def moving_average(array, width):
+            array_padded = np.concatenate((np.zeros((width - 1) // 2), array, np.zeros(width // 2)))
+            ret = np.cumsum(array_padded, dtype=float)
+            ret[width:] = ret[width:] - ret[:-width]
+            return ret[width - 1:] / width
+        audio_mask = moving_average(voice_flags, self.vad_moving_average_width)
+        audio_mask = np.round(audio_mask).astype(np.bool)
+        audio_mask[:] = binary_dilation(audio_mask[:], np.ones(self.vad_max_silence_length + 1))
+        audio_mask = np.repeat(audio_mask, samples_per_window)
+        return audio_mask
+
 
     @staticmethod
     def label_2_float(x: np.array, bits: float) -> np.array:

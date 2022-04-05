@@ -19,16 +19,16 @@ class Aligner(nn.Module):
 
         self.text_encoder = nn.Sequential(
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
-            nn.BatchNorm1d(256),
+            #nn.BatchNorm1d(256),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
-            nn.BatchNorm1d(256),
+            #nn.BatchNorm1d(256),
             nn.Conv1d(in_channels=256, out_channels=64, kernel_size=5, padding=2)
         )
         self.mel_encoder = nn.Sequential(
             nn.Conv1d(in_channels=80, out_channels=256, kernel_size=5, padding=2),
-            nn.BatchNorm1d(256),
+            #nn.BatchNorm1d(256),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
-            nn.BatchNorm1d(256),
+            #nn.BatchNorm1d(256),
             nn.Conv1d(in_channels=256, out_channels=64, kernel_size=5, padding=2)
         )
 

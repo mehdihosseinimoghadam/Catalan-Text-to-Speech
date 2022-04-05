@@ -20,19 +20,19 @@ class Aligner(nn.Module):
         self.text_encoder = nn.Sequential(
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
             nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
+            nn.Dropout(0.1),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
             nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
+            nn.Dropout(0.1),
             nn.Conv1d(in_channels=256, out_channels=64, kernel_size=5, padding=2)
         )
         self.mel_encoder = nn.Sequential(
             nn.Conv1d(in_channels=80, out_channels=256, kernel_size=5, padding=2),
             nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
+            nn.Dropout(0.1),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=5, padding=2),
             nn.BatchNorm1d(256),
-            nn.Dropout(0.5),
+            nn.Dropout(0.1),
             nn.Conv1d(in_channels=256, out_channels=64, kernel_size=5, padding=2)
         )
 
@@ -51,8 +51,8 @@ class Aligner(nn.Module):
         x = x.transpose(1, 2)
         m = m.transpose(1, 2)
 
-        #x, _ = self.gru_1(x)
-        #m, _ = self.gru_2(m)
+        x, _ = self.gru_1(x)
+        m, _ = self.gru_2(m)
 
         diff = x[:, None, :, :] - m[:, :, None, :]
         dist = -torch.linalg.norm(diff, ord=2, dim=-1)

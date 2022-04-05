@@ -132,20 +132,20 @@ def create_align_features(model: Aligner,
 
         att = att_orig.copy()
         durs, mean_att = extract_durations_with_dijkstra(seq, att, mel_len, improve=False)
-        att = att_orig.copy()
-        durs_2, mean_att_2 = extract_durations_with_dijkstra(seq, att, mel_len, improve=True)
-
+#        att = att_orig.copy()
+#        durs_2, mean_att_2 = extract_durations_with_dijkstra(seq, att, mel_len, improve=True)
+        print(durs)
         text = Tokenizer().decode([int(c) for c in seq])
         print()
         print(item_id, sharp_score)
         print(text)
 
-        for t, d, d2 in zip(text, durs, durs_2):
-            print(t, d, d2)
+        #for t, d, d2 in zip(text, durs, durs_2):
+        #    print(t, d, d2)
 
         print('sharp score:', sharp_score)
         print('bad att:', mean_att)
-        print('bad att 2:', mean_att_2)
+        #print('bad att 2:', mean_att_2)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
         np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)

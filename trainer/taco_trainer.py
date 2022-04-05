@@ -69,7 +69,7 @@ class ForwardSumLossOrig(torch.nn.Module):
                                 target_lengths=text_lens[bid:bid+1])
             cost_total += cost
             # average cost over batch
-            cost_total = cost_total/attn_logprob.shape[0]
+        cost_total = cost_total/attn_logprob.shape[0]
         return cost_total
 
 class ForwardSumLoss(torch.nn.Module):
@@ -171,7 +171,7 @@ class TacoTrainer:
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(model.parameters(),
                                                    self.train_cfg['clip_grad_norm'])
-                optimizer.step()
+                    optimizer.step()
 
                 step = model.get_step()
                 k = step // 1000

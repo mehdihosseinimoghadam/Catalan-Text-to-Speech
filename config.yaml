@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_aligner_tts'
+tts_model_id: 'bild_aligner_orig_tts'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                              # choices: [forward_tacotron, fast_pitch]
@@ -62,7 +62,7 @@ tacotron:
 
   training:
     schedule:
-      - 1,  1e-3,  1000,  32      # progressive training schedule
+      - 1,  1e-4,  1000,  32      # progressive training schedule
       - 1,   1e-4,  10000,  32     # (r, lr, step, batch_size)
 
     max_mel_len: 1250                # if you have a couple of extremely long spectrograms you might want to use this

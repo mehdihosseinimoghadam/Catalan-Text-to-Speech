@@ -223,10 +223,10 @@ class TacoTrainer:
         model.train()
         for b in tqdm.tqdm(range(32), total=32):
             with torch.no_grad():
-                att = model(batch['x'], batch['mel']).softmax(-1)
+                att = model(batch['x'], batch['mel'])
             att_avg[b, :, :] = att[0]
 
-        att_avg = torch.mean(att_avg, dim=0)
+        att_avg = torch.mean(att_avg, dim=0).softmax(-1)
         att_avg = np_now(att_avg)
 
         att_fig = plot_attention(att_avg)

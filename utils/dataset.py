@@ -147,7 +147,7 @@ def get_tts_datasets(path: Path,
     text_dict = unpickle_binary(path/'text_dict.pkl')
 
     train_data = filter_max_len(train_data, max_mel_len)
-    train_data = filter_min_len(train_data, 30)
+    #train_data = filter_min_len(train_data, 200)
     val_data = filter_max_len(val_data, max_mel_len)
     train_len_original = len(train_data)
 

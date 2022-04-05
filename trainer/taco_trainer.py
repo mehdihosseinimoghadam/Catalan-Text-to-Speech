@@ -20,6 +20,58 @@ from utils.metrics import attention_score
 from utils.paths import Paths
 
 
+
+class ForwardSumLossOrig(torch.nn.Module):
+
+    def __init__(self, blank_logprob=-1):
+        super(ForwardSumLossOrig, self).__init__()
+        self.log_softmax = torch.nn.LogSoftmax(dim=3)
+        self.blank_logprob = blank_logprob
+        self.CTCLoss = torch.nn.CTCLoss(zero_infinity=True)
+
+    def forward(self, attn_logprob, text_lens, mel_lens):
+        """
+        Args:
+        attn_logprob: batch x 1 x max(mel_lens) x max(text_lens)
+        batched tensor of attention log
+        probabilities, padded to length
+        of longest sequence in each dimension
+        text_lens: batch-D vector of length of
+        each text sequence
+        mel_lens: batch-D vector of length of
+        each mel sequence
+        """
+        # The CTC loss module assumes the existence of a blank token
+        # that can be optionally inserted anywhere in the sequence for
+        # a fixed probability.
+        # A row must be added to the attention matrix to account for this
+        attn_logprob = attn_logprob.unsqueeze(1)
+        attn_logprob_pd = F.pad(input=attn_logprob,
+                                pad=(1, 0, 0, 0, 0, 0, 0, 0),
+                                value=self.blank_logprob)
+        cost_total = 0.0
+        # for-loop over batch because of variable-length
+        # sequences
+        for bid in range(attn_logprob.shape[0]):
+            # construct the target sequence. Every
+            # text token is mapped to a unique sequence number,
+            # thereby ensuring the monotonicity constraint
+            target_seq = torch.arange(1, text_lens[bid]+1)
+            target_seq=target_seq.unsqueeze(0)
+            curr_logprob = attn_logprob_pd[bid].permute(1, 0, 2)
+            curr_logprob = curr_logprob[:mel_lens[bid],:,:text_lens[bid]+1]
+            curr_logprob = self.log_softmax(curr_logprob[None])[0]
+            print(attn_logprob.size(), curr_logprob.size(), target_seq.size(), mel_lens[bid:bid+1], text_lens[bid:bid+1])
+
+            cost = self.CTCLoss(curr_logprob,
+                                target_seq,
+                                input_lengths=mel_lens[bid:bid+1],
+                                target_lengths=text_lens[bid:bid+1])
+            cost_total += cost
+            # average cost over batch
+            cost_total = cost_total/attn_logprob.shape[0]
+        return cost_total
+
 class ForwardSumLoss(torch.nn.Module):
     def __init__(self, blank_logprob=-1):
         super().__init__()
@@ -34,13 +86,15 @@ class ForwardSumLoss(torch.nn.Module):
 
         total_loss = 0.0
         for bid in range(attn_logprob.shape[0]):
+            #ql =int(attn_logprob_padded.size(1))
+            #kl = int(attn_logprob_padded.size(2))
             ql = min(int(query_lens[bid]), int(attn_logprob_padded.size(1)))
             kl = min(int(key_lens[bid]), int(attn_logprob_padded.size(2)))
             target_seq = torch.arange(1, kl + 1).unsqueeze(0).to(attn_logprob.device)
-            curr_logprob = attn_logprob_padded[bid][:ql, :key_lens[bid] + 1]
+            curr_logprob = attn_logprob_padded[bid][:ql, :kl + 1]
             curr_logprob = curr_logprob.unsqueeze(1)
             curr_logprob = curr_logprob.log_softmax(dim=-1)
-            #print(curr_logprob.size(), target_seq.size(), ql, kl)
+            print(curr_logprob.size(), target_seq.size(), ql, kl)
             loss = self.ctc_loss(
                 curr_logprob,
                 target_seq,
@@ -65,6 +119,7 @@ class TacoTrainer:
         self.train_cfg = config['tacotron']['training']
         self.writer = SummaryWriter(log_dir=paths.taco_log, comment='v1')
         self.loss_fn = ForwardSumLoss()
+        self.loss_fn_orig = ForwardSumLossOrig()
 
     def train(self,
               model: Aligner,
@@ -108,7 +163,8 @@ class TacoTrainer:
                 model.train()
                 attn = model(batch['x'].detach(), batch['mel'].detach())
 
-                loss = self.loss_fn(attn, in_lens=batch['x_len'], out_lens=batch['mel_len'])
+                #loss = self.loss_fn(attn, in_lens=batch['x_len'], out_lens=batch['mel_len'])
+                loss = self.loss_fn_orig(attn, text_lens=batch['x_len'], mel_lens=batch['mel_len'])
 
                 optimizer.zero_grad()
                 if not torch.isnan(loss) or torch.isinf(loss):

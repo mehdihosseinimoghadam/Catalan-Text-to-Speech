@@ -27,8 +27,8 @@ class Aligner(nn.Module):
             nn.Conv1d(in_channels=512, out_channels=256, kernel_size=3, padding=1)
         )
 
-        self.gru_1 = GRU(256, 256, bidirectional=True)
-        self.gru_2 = GRU(256, 256, bidirectional=True)
+        self.gru_1 = GRU(256, 64, bidirectional=True)
+        self.gru_2 = GRU(256, 64, bidirectional=True)
 
 
     def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:

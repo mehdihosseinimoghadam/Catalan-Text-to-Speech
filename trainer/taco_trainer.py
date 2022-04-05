@@ -61,7 +61,7 @@ class ForwardSumLossOrig(torch.nn.Module):
             curr_logprob = attn_logprob_pd[bid].permute(1, 0, 2)
             curr_logprob = curr_logprob[:mel_lens[bid],:,:text_lens[bid]+1]
             curr_logprob = self.log_softmax(curr_logprob[None])[0]
-            print(attn_logprob.size(), curr_logprob.size(), target_seq.size(), mel_lens[bid:bid+1], text_lens[bid:bid+1])
+            #print(attn_logprob.size(), curr_logprob.size(), target_seq.size(), mel_lens[bid:bid+1], text_lens[bid:bid+1])
 
             cost = self.CTCLoss(curr_logprob,
                                 target_seq,
@@ -94,7 +94,7 @@ class ForwardSumLoss(torch.nn.Module):
             curr_logprob = attn_logprob_padded[bid][:ql, :kl + 1]
             curr_logprob = curr_logprob.unsqueeze(1)
             curr_logprob = curr_logprob.log_softmax(dim=-1)
-            print(curr_logprob.size(), target_seq.size(), ql, kl)
+            #print(curr_logprob.size(), target_seq.size(), ql, kl)
             loss = self.ctc_loss(
                 curr_logprob,
                 target_seq,

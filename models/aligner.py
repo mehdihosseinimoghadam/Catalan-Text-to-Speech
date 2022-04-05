@@ -19,15 +19,19 @@ class Aligner(nn.Module):
 
         self.text_encoder = nn.Sequential(
             nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-            nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3, padding=1)
+            nn.Conv1d(in_channels=512, out_channels=256, kernel_size=3, padding=1)
         )
         self.mel_encoder = nn.Sequential(
             nn.Conv1d(in_channels=80, out_channels=512, kernel_size=3, padding=1),
             nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
-            nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3, padding=1)
+            nn.Conv1d(in_channels=512, out_channels=256, kernel_size=3, padding=1)
         )
 
-    def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+        self.gru_1 = GRU(256, 256, bidirectional=True)
+        self.gru_2 = GRU(256, 256, bidirectional=True)
+
+
+def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
         if self.training:
             self.step += 1
         x = self.embedding(x)

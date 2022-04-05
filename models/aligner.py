@@ -31,7 +31,7 @@ class Aligner(nn.Module):
         self.gru_2 = GRU(256, 256, bidirectional=True)
 
 
-def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
         if self.training:
             self.step += 1
         x = self.embedding(x)
@@ -42,6 +42,9 @@ def forward(self, x: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
 
         x = x.transpose(1, 2)
         m = m.transpose(1, 2)
+
+        x, _ = self.gru_1(x)
+        m, _ = self.gru_1(m)
 
         diff = x[:, None, :, :] - m[:, :, None, :]
         dist = -torch.linalg.norm(diff, ord=2, dim=-1)

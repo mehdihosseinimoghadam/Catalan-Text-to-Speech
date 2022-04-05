@@ -157,6 +157,7 @@ class TacoTrainer:
         loss_avg = Averager()
         duration_avg = Averager()
         device = next(model.parameters()).device  # use same device as model parameters
+        self.loss_fn_orig = self.loss_fn_orig.to(device)
         for e in range(1, epochs + 1):
             for i, batch in enumerate(session.train_set, 1):
                 batch = to_device(batch, device=device)

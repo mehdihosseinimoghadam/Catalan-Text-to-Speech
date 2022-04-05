@@ -14,6 +14,7 @@ def from_node_index(node_index: int, cols: int) -> Tuple[int, int]:
 
 
 def to_adj_matrix(mat: np.array) -> csr_matrix:
+
     rows = mat.shape[0]
     cols = mat.shape[1]
 

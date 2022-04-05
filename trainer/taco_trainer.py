@@ -2,6 +2,7 @@ import time
 
 import torch
 import torch.nn.functional as F
+import tqdm
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
@@ -211,9 +212,22 @@ class TacoTrainer:
         device = next(model.parameters()).device
         batch = session.val_sample
         batch = to_device(batch, device=device)
-        att = model(batch['x'], batch['mel']).softmax(-1)
+        with torch.no_grad():
+            att = model(batch['x'], batch['mel']).softmax(-1)
         att = np_now(att)[0]
 
         att_fig = plot_attention(att)
-
         self.writer.add_figure('Ground_Truth_Aligned/attention', att_fig, model.step)
+
+        att_avg = torch.zeros((32, att.shape[0], att.shape[1]))
+        model.train()
+        for b in tqdm.tqdm(range(32), total=32):
+            with torch.no_grad():
+                att = model(batch['x'], batch['mel']).softmax(-1)
+            att_avg[b, :, :] = att[0]
+
+        att_avg = torch.mean(att_avg, dim=0)
+        att_avg = np_now(att_avg)
+
+        att_fig = plot_attention(att_avg)
+        self.writer.add_figure('Ground_Truth_Aligned/attention_avg', att_fig, model.step)

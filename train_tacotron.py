@@ -100,13 +100,11 @@ def create_gta_features(model: Tacotron,
         stream(msg)
 
 
-def create_align_features(model: Tacotron,
+def create_align_features(model: Aligner,
                           train_set: DataLoader,
                           val_set: DataLoader,
                           paths: Paths,
                           pitch_max_freq: float) -> None:
-    assert model.r == 1, f'Reduction factor of tacotron must be 1 for creating alignment features! ' \
-                         f'Reduction factor was: {model.r}'
     model.eval()
     #model.decoder.prenet.train()
     device = next(model.parameters()).device  # use same device as model parameters
@@ -124,7 +122,8 @@ def create_align_features(model: Tacotron,
     for i, batch in enumerate(tqdm.tqdm(dataset, total=11000), 1):
         batch = to_device(batch, device=device)
         with torch.no_grad():
-            _, _, att_batch = model(batch['x'], batch['mel'])
+            att_batch = model(batch['x'], batch['mel'])
+        att_batch = att_batch.softmax(-1)
         align_score, sharp_score = attention_score(att_batch, batch['mel_len'], r=1)
         att_batch = np_now(att_batch)
         seq, att_orig, mel_len, item_id = batch['x'][0], att_batch[0], batch['mel_len'][0], batch['item_id'][0]
@@ -149,7 +148,7 @@ def create_align_features(model: Tacotron,
         print('bad att 2:', mean_att_2)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
-        np.save(str(paths.alg / f'{item_id}.npy'), durs_2, allow_pickle=False)
+        np.save(str(paths.alg / f'{item_id}.npy'), durs, allow_pickle=False)
         bar = progbar(i, iters)
         msg = f'{bar} {i}/{iters} Files '
         stream(msg)
@@ -201,7 +200,7 @@ if __name__ == '__main__':
         print('\n\nYou can now train WaveRNN on GTA features - use python train_wavernn.py --gta\n')
     elif args.force_align:
         print('Creating Attention Alignments and Pitch Values...')
-        train_set, val_set = get_tts_datasets(paths.data, 1, model.r,
+        train_set, val_set = get_tts_datasets(paths.data, 1, 1,
                                               max_mel_len=None,
                                               filter_attention=False)
         create_align_features(model=model, train_set=train_set, val_set=val_set,

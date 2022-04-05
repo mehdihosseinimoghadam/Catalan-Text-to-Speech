@@ -219,7 +219,9 @@ class TacoTrainer:
         att_fig = plot_attention(att)
         self.writer.add_figure('Ground_Truth_Aligned/attention', att_fig, model.step)
 
+        """
         att_avg = torch.zeros((32, att.shape[0], att.shape[1]))
+        
         model.train()
         for b in tqdm.tqdm(range(32), total=32):
             with torch.no_grad():
@@ -228,6 +230,8 @@ class TacoTrainer:
 
         att_avg = torch.mean(att_avg, dim=0).softmax(-1)
         att_avg = np_now(att_avg)
-
+        
         att_fig = plot_attention(att_avg)
+        
         self.writer.add_figure('Ground_Truth_Aligned/attention_avg', att_fig, model.step)
+        """

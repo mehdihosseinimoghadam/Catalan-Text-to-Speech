@@ -19,6 +19,48 @@ from utils.metrics import attention_score
 from utils.paths import Paths
 
 
+class ForwardSumLoss(torch.nn.Module):
+
+    def __init__(self, blank_logprob=-1):
+        super(ForwardSumLoss, self).__init__()
+        self.log_softmax = torch.nn.LogSoftmax(dim=3)
+        self.blank_logprob = blank_logprob
+        self.CTCLoss = torch.nn.CTCLoss(zero_infinity=True)
+
+    def forward(self, attn_logprob, text_lens, mel_lens):
+        """
+        Args:
+        attn_logprob: batch x 1 x max(mel_lens) x max(text_lens)
+        batched tensor of attention log
+        probabilities, padded to length
+        of longest sequence in each dimension
+        text_lens: batch-D vector of length of
+        each text sequence
+        mel_lens: batch-D vector of length of
+        each mel sequence
+        """
+        # The CTC loss module assumes the existence of a blank token
+        # that can be optionally inserted anywhere in the sequence for
+        # a fixed probability.
+        # A row must be added to the attention matrix to account for this
+        attn_logprob_pd = F.pad(input=attn_logprob,
+                                pad=(1, 0, 0, 0, 0, 0),
+                                value=self.blank_logprob)
+
+
+        bs = attn_logprob.size(0)
+        T = attn_logprob.size(-1)
+        target_seq = torch.arange(1, T+1).expand(bs, T)
+        attn_logprob_pd = attn_logprob_pd.permute(1, 0, 2)
+        attn_logprob_pd = attn_logprob_pd.log_softmax(-1)
+
+        cost = self.CTCLoss(attn_logprob_pd,
+                            target_seq,
+                            input_lengths=mel_lens,
+                            target_lengths=text_lens)
+        return cost
+
+
 class TacoTrainer:
 
     def __init__(self,
@@ -30,6 +72,7 @@ class TacoTrainer:
         self.config = config
         self.train_cfg = config['tacotron']['training']
         self.writer = SummaryWriter(log_dir=paths.taco_log, comment='v1')
+        self.forward_loss = ForwardSumLoss()
 
     def train(self,
               model: Tacotron,
@@ -66,6 +109,7 @@ class TacoTrainer:
         loss_avg = Averager()
         duration_avg = Averager()
         device = next(model.parameters()).device  # use same device as model parameters
+        self.forward_loss = self.forward_loss.to(device)
         for e in range(1, epochs + 1):
             for i, batch in enumerate(session.train_set, 1):
                 batch = to_device(batch, device=device)
@@ -73,9 +117,11 @@ class TacoTrainer:
                 model.train()
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
 
+                ctc_loss = self.forward_loss(torch.log(attention), text_lens=batch['x_len'], mel_lens=batch['mel_len'])
+
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss
+                loss = m1_loss + m2_loss + ctc_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
@@ -101,6 +147,7 @@ class TacoTrainer:
                 att_score = torch.mean(att_score)
                 self.writer.add_scalar('Attention_Score/train', att_score, model.get_step())
                 self.writer.add_scalar('Loss/train', loss, model.get_step())
+                self.writer.add_scalar('CTCLoss/train', ctc_loss, model.get_step())
                 self.writer.add_scalar('Params/reduction_factor', session.r, model.get_step())
                 self.writer.add_scalar('Params/batch_size', session.bs, model.get_step())
                 self.writer.add_scalar('Params/learning_rate', session.lr, model.get_step())

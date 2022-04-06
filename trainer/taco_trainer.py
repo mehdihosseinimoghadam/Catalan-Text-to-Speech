@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 from typing import Tuple, Dict, Any
 
-from models.tacotron import Tacotron
+from models.tacotron import Tacotron, Aligner
 from trainer.common import Averager, TTSSession, to_device, np_now
 from utils.checkpoints import save_checkpoint
 from utils.dataset import get_tts_datasets
@@ -17,6 +17,7 @@ from utils.dsp import DSP
 from utils.files import parse_schedule
 from utils.metrics import attention_score
 from utils.paths import Paths
+from utils.text.symbols import phonemes
 
 
 class ForwardSumLoss(torch.nn.Module):
@@ -94,6 +95,7 @@ class TacoTrainer:
     def train_session(self, model: Tacotron,
                       optimizer: Optimizer,
                       session: TTSSession) -> None:
+
         current_step = model.get_step()
         training_steps = session.max_step - current_step
         total_iters = len(session.train_set)
@@ -109,6 +111,7 @@ class TacoTrainer:
         loss_avg = Averager()
         duration_avg = Averager()
         device = next(model.parameters()).device  # use same device as model parameters
+        aligner = Aligner(num_chars=len(phonemes)).to(device)
         self.forward_loss = self.forward_loss.to(device)
         for e in range(1, epochs + 1):
             for i, batch in enumerate(session.train_set, 1):
@@ -116,12 +119,14 @@ class TacoTrainer:
                 start = time.time()
                 model.train()
                 m1_hat, m2_hat, attention, att_u = model(batch['x'], batch['mel'])
+                att_aligner = aligner(batch['x'], batch['mel'])
+                ctc_loss = self.forward_loss(att_aligner, text_lens=batch['x_len'], mel_lens=batch['mel_len'])
 
-                ctc_loss = self.forward_loss(att_u, text_lens=batch['x_len'], mel_lens=batch['mel_len'])
+                att_diff_loss = F.l1_loss(attention, att_aligner.detach())
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss + ctc_loss
+                loss = m1_loss + m2_loss + ctc_loss + att_diff_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
@@ -147,6 +152,7 @@ class TacoTrainer:
                 att_score = torch.mean(att_score)
                 self.writer.add_scalar('Attention_Score/train', att_score, model.get_step())
                 self.writer.add_scalar('Loss/train', loss, model.get_step())
+                self.writer.add_scalar('Att_Diff_Loss/train', att_diff_loss, model.get_step())
                 self.writer.add_scalar('CTCLoss/train', ctc_loss, model.get_step())
                 self.writer.add_scalar('Params/reduction_factor', session.r, model.get_step())
                 self.writer.add_scalar('Params/batch_size', session.bs, model.get_step())

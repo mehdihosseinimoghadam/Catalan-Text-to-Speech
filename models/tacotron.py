@@ -96,7 +96,7 @@ class LSA(nn.Module):
         self.attention = scores
         self.cumulative += self.attention
 
-        return scores.unsqueeze(-1).transpose(1, 2)
+        return scores.unsqueeze(-1).transpose(1, 2), u.unsqueeze(-1).transpose(1, 2)
 
 
 class Decoder(nn.Module):
@@ -139,7 +139,7 @@ class Decoder(nn.Module):
         attn_hidden = self.attn_rnn(attn_rnn_in.squeeze(1), attn_hidden)
 
         # Compute the attention scores
-        scores = self.attn_net(encoder_seq_proj, attn_hidden, t)
+        scores, u = self.attn_net(encoder_seq_proj, attn_hidden, t)
 
         # Dot product to create the context vector
         context_vec = scores @ encoder_seq
@@ -171,7 +171,7 @@ class Decoder(nn.Module):
         hidden_states = (attn_hidden, rnn1_hidden, rnn2_hidden)
         cell_states = (rnn1_cell, rnn2_cell)
 
-        return mels, scores, hidden_states, cell_states, context_vec
+        return mels, scores, hidden_states, cell_states, context_vec, u
 
 
 class Tacotron(nn.Module):
@@ -244,16 +244,17 @@ class Tacotron(nn.Module):
         encoder_seq_proj = self.encoder_proj(encoder_seq)
 
         # Need a couple of lists for outputs
-        mel_outputs, attn_scores = [], []
+        mel_outputs, attn_scores, attn_u = [], [], []
 
         # Run the decoder loop
         for t in range(0, steps, self.r):
             prenet_in = m[:, :, t - 1] if t > 0 else go_frame
-            mel_frames, scores, hidden_states, cell_states, context_vec = \
+            mel_frames, scores, hidden_states, cell_states, context_vec, u = \
                 self.decoder(encoder_seq, encoder_seq_proj, prenet_in,
                              hidden_states, cell_states, context_vec, t)
             mel_outputs.append(mel_frames)
             attn_scores.append(scores)
+            attn_u.append(u)
 
         # Concat the mel outputs into sequence
         mel_outputs = torch.cat(mel_outputs, dim=2)
@@ -265,9 +266,10 @@ class Tacotron(nn.Module):
 
         # For easy visualisation
         attn_scores = torch.cat(attn_scores, 1)
+        attn_u = torch.cat(attn_u, 1)
         # attn_scores = attn_scores.cpu().data.numpy()
 
-        return mel_outputs, linear, attn_scores
+        return mel_outputs, linear, attn_scores, attn_u
 
     def generate(self, x: torch.tensor, steps=2000) -> Tuple[torch.tensor, torch.tensor, torch.tensor]:
         self.eval()
@@ -303,7 +305,7 @@ class Tacotron(nn.Module):
         # Run the decoder loop
         for t in range(0, steps, self.r):
             prenet_in = mel_outputs[-1][:, :, -1] if t > 0 else go_frame
-            mel_frames, scores, hidden_states, cell_states, context_vec = \
+            mel_frames, scores, hidden_states, cell_states, context_vec, u = \
             self.decoder(encoder_seq, encoder_seq_proj, prenet_in,
                          hidden_states, cell_states, context_vec, t)
             mel_outputs.append(mel_frames)

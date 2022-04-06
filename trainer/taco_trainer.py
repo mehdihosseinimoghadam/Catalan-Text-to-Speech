@@ -115,9 +115,9 @@ class TacoTrainer:
                 batch = to_device(batch, device=device)
                 start = time.time()
                 model.train()
-                m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
+                m1_hat, m2_hat, attention, att_u = model(batch['x'], batch['mel'])
 
-                ctc_loss = self.forward_loss(torch.log(attention), text_lens=batch['x_len'], mel_lens=batch['mel_len'])
+                ctc_loss = self.forward_loss(att_u, text_lens=batch['x_len'], mel_lens=batch['mel_len'])
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
@@ -172,7 +172,7 @@ class TacoTrainer:
         for i, batch in enumerate(val_set, 1):
             batch = to_device(batch, device=device)
             with torch.no_grad():
-                m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
+                m1_hat, m2_hat, attention, att_u = model(batch['x'], batch['mel'])
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
                 val_loss += m1_loss.item() + m2_loss.item()
@@ -187,7 +187,7 @@ class TacoTrainer:
         device = next(model.parameters()).device
         batch = session.val_sample
         batch = to_device(batch, device=device)
-        m1_hat, m2_hat, att = model(batch['x'], batch['mel'])
+        m1_hat, m2_hat, att, att_u = model(batch['x'], batch['mel'])
         att = np_now(att)[0]
         m1_hat = np_now(m1_hat)[0, :600, :]
         m2_hat = np_now(m2_hat)[0, :600, :]

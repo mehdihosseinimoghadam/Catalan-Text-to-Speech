@@ -53,11 +53,21 @@ def to_adj_matrix(mat: np.array) -> csr_matrix:
 
 def extract_durations_with_dijkstra(seq: np.array,
                                     att: np.array,
-                                    mel_len: int) -> np.array:
+                                    mel_len: int,
+                                    sil_mask: np.array) -> np.array:
     """
     Extracts durations from the attention matrix by finding the shortest monotonic path from
     top left to bottom right.
     """
+
+    if sil_mask is not None:
+        for i in range(mel_len):
+            if sil_mask[i] < -11:
+                for j in range(len(seq)):
+                    if seq[j] <= 10:
+                        att[i, j] += 0.25
+                    else:
+                        att[i, j] -= 0.25
 
     path_probs = 1.-att[:mel_len, :]
     adj_matrix = to_adj_matrix(path_probs)

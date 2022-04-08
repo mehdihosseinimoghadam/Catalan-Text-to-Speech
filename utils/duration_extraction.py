@@ -65,9 +65,9 @@ def extract_durations_with_dijkstra(seq: np.array,
             if sil_mask[i] < -11:
                 for j in range(len(seq)):
                     if seq[j] <= 10:
-                        att[i, j] += 0.25
+                        att[i, j] += 0.
                     else:
-                        att[i, j] -= 0.25
+                        att[i, j] -= 0.
 
     path_probs = 1.-att[:mel_len, :]
     adj_matrix = to_adj_matrix(path_probs)

@@ -87,10 +87,11 @@ class TacoTrainer:
                 dia_mat = dia_mat.softmax(dim=-1)
 
                 dia_loss = F.l1_loss(attention, dia_mat)
+                dia_factor = self.train_cfg['dia_factor'] if model.get_step() < 1000 else 0.
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss + self.train_cfg['dia_factor']*dia_loss
+                loss = m1_loss + m2_loss + dia_factor*dia_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),

@@ -84,7 +84,10 @@ class TacoTrainer:
                         factor = math.exp(-0.5*diff**2 / sigma**2)
                         dia_mat[:, a, b] = factor
 
-                dia_loss = F.l1_loss(attention, dia_mat)
+                diff = torch.abs(attention - dia_mat)
+                dia_loss, _ = torch.max(diff, dim=-1)
+                dia_loss = dia_loss.mean()
+                #dia_loss = F.l1_loss(attention, dia_mat)
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])

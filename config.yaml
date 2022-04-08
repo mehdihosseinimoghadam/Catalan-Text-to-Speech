@@ -62,7 +62,7 @@ tacotron:
 
   training:
     dia_factor: 1.
-    dia_sigma: 5.
+    dia_sigma: 50.
     schedule:
       - 1,  5e-5,  10_000,  8      # progressive training schedule
 

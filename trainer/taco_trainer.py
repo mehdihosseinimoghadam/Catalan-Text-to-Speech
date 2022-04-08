@@ -77,14 +77,15 @@ class TacoTrainer:
                 dia_mat = torch.zeros(attention.size()).to(device).detach()
 
                 sigma = self.train_cfg['dia_sigma']
+
                 for a in range(dia_mat.size(1)):
                     for b in range(dia_mat.size(2)):
                         mid = dia_mat.size(2) / dia_mat.size(1) * a
                         diff = (b - mid)
-                        factor = math.exp(-0.5*diff**2 / sigma**2)
+                        factor = 100.*math.exp(-0.5*diff**2 / sigma**2)
                         dia_mat[:, a, b] = factor
+                dia_mat = dia_mat.softmax(dim=-1)
 
-                dia_mat = dia_mat.softmax(-1)
                 dia_loss = F.l1_loss(attention, dia_mat)
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
@@ -202,14 +203,14 @@ class TacoTrainer:
 
 
 if __name__ == '__main__':
-    sigma = 5.
+    sigma = 50.
     dia_mat = torch.zeros(1, 200, 100)
     for a in range(dia_mat.size(1)):
         for b in range(dia_mat.size(2)):
             mid = dia_mat.size(2) / dia_mat.size(1) * a
             diff = (b - mid)
-            factor = math.exp(-0.5*diff**2 / sigma**2)
+            factor = 100.*math.exp(-0.5*diff**2 / sigma**2)
             dia_mat[:, a, b] = factor
-    #dia_mat = dia_mat.softmax(dim=-1)
+    dia_mat = dia_mat.softmax(dim=-1)
     #dia_mat = dia_mat / torch.max(dia_mat)
     print(dia_mat)

@@ -74,17 +74,17 @@ class TacoTrainer:
                 model.train()
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
 
-                dia_mat = torch.zeros(attention.size()).to(device)
-                dia_loss = F.l1_loss(attention, dia_mat)
+                dia_mat = torch.zeros(attention.size()).to(device).detach()
 
                 sigma = self.train_cfg['dia_sigma']
                 for a in range(dia_mat.size(1)):
                     for b in range(dia_mat.size(2)):
                         mid = dia_mat.size(2) / dia_mat.size(1) * a
                         diff = abs(b - mid)
-                        factor = -math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
+                        factor = math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
                         dia_mat[:, a, b] = factor
 
+                dia_loss = F.l1_loss(attention, dia_mat)
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])

@@ -80,8 +80,8 @@ class TacoTrainer:
                 for a in range(dia_mat.size(1)):
                     for b in range(dia_mat.size(2)):
                         mid = dia_mat.size(2) / dia_mat.size(1) * a
-                        diff = abs(b - mid)
-                        factor = math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
+                        diff = (b - mid)
+                        factor = math.exp(-0.5*diff**2 / sigma**2)
                         dia_mat[:, a, b] = factor
 
                 dia_loss = F.l1_loss(attention, dia_mat)

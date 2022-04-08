@@ -75,23 +75,21 @@ class TacoTrainer:
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
 
                 dia_mat = torch.zeros(attention.size()).to(device).detach()
+                dia_mat = dia_mat.transpose(1, 2)
+                T = dia_mat.size(2)
+                N = dia_mat.size(1)
+                g = self.train_cfg['dia_g']
+                for t in range(T):
+                    for n in range(N):
+                        dia_mat[:, n, t] = 1. - math.exp(-(n/N - t/T)**2 / (2. * g**2))
+                dia_mat = dia_mat.transpose(1, 2)
 
-                sigma = self.train_cfg['dia_sigma']
-
-                for a in range(dia_mat.size(1)):
-                    for b in range(dia_mat.size(2)):
-                        mid = dia_mat.size(2) / dia_mat.size(1) * a
-                        diff = (b - mid)
-                        factor = 100.*math.exp(-0.5*diff**2 / sigma**2)
-                        dia_mat[:, a, b] = factor
-                dia_mat = dia_mat.softmax(dim=-1)
-
-                dia_loss = F.l1_loss(attention, dia_mat)
-                dia_factor = self.train_cfg['dia_factor'] if model.get_step() < 1000 else 0.
+                dia_loss = dia_mat * attention
+                dia_loss = dia_loss.mean() * self.train_cfg['dia_factor']
 
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss + dia_factor*dia_loss
+                loss = m1_loss + m2_loss + dia_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
@@ -206,12 +204,19 @@ class TacoTrainer:
 if __name__ == '__main__':
     sigma = 50.
     dia_mat = torch.zeros(1, 200, 100)
-    for a in range(dia_mat.size(1)):
-        for b in range(dia_mat.size(2)):
-            mid = dia_mat.size(2) / dia_mat.size(1) * a
-            diff = (b - mid)
-            factor = 100.*math.exp(-0.5*diff**2 / sigma**2)
-            dia_mat[:, a, b] = factor
-    dia_mat = dia_mat.softmax(dim=-1)
+
+    T = dia_mat.size(2)
+    N = dia_mat.size(1)
+    g = 0.2
+    for t in range(T):
+        for n in range(N):
+            dia_mat[:, n, t] = 1. - math.exp(-(n/N - t/T)**2 / (2 * g**2))
+
+
+    # = 1 − exp{−(n/N − t/T)
+    # 2
+    # /2g
+    # 2
+    # }
     #dia_mat = dia_mat / torch.max(dia_mat)
     print(dia_mat)

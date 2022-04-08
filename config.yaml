@@ -1,6 +1,6 @@
 
 voc_model_id: 'ljspeech_voc'
-tts_model_id: 'bild_acroexpanded_rp_new_tts'
+tts_model_id: 'bild_dia_tts'
 data_path: 'data/'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
@@ -61,6 +61,8 @@ tacotron:
     stop_threshold: -11             # Value below which audio generation ends.
 
   training:
+    dia_factor: 0.1
+    dia_sigma: 0.1
     schedule:
       - 5,  1e-3,  10_000,  32      # progressive training schedule
       - 3,   1e-4,  20_000,  16     # (r, lr, step, batch_size)

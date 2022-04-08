@@ -1,3 +1,4 @@
+import math
 import time
 
 import torch
@@ -73,9 +74,21 @@ class TacoTrainer:
                 model.train()
                 m1_hat, m2_hat, attention = model(batch['x'], batch['mel'])
 
+                dia_mat = torch.zeros(attention.size()).to(device)
+                dia_loss = F.l1_loss(attention, dia_mat)
+
+                sigma = self.train_cfg['dia_sigma']
+                for a in range(dia_mat.size(1)):
+                    for b in range(dia_mat.size(2)):
+                        mid = dia_mat.size(2) / dia_mat.size(1) * a
+                        diff = abs(b - mid)
+                        factor = -math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
+                        dia_mat[:, a, b] = factor
+
+
                 m1_loss = F.l1_loss(m1_hat, batch['mel'])
                 m2_loss = F.l1_loss(m2_hat, batch['mel'])
-                loss = m1_loss + m2_loss
+                loss = m1_loss + m2_loss + self.train_cfg['dia_factor']*dia_loss
                 optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(),
@@ -184,3 +197,15 @@ class TacoTrainer:
         self.writer.add_audio(
             tag='Generated/postnet_wav', snd_tensor=m2_hat_wav,
             global_step=model.step, sample_rate=self.dsp.sample_rate)
+
+
+if __name__ == '__main__':
+    sigma = 0.1
+    dia_mat = torch.zeros(1, 15, 10)
+    for a in range(dia_mat.size(1)):
+        for b in range(dia_mat.size(2)):
+            mid = dia_mat.size(2) / dia_mat.size(1) * a
+            diff = abs(b - mid)
+            factor = math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
+            dia_mat[:, a, b] = factor
+    print(dia_mat)

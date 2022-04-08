@@ -200,12 +200,14 @@ class TacoTrainer:
 
 
 if __name__ == '__main__':
-    sigma = 0.1
-    dia_mat = torch.zeros(1, 15, 10)
+    sigma = 5.
+    dia_mat = torch.zeros(1, 200, 100)
     for a in range(dia_mat.size(1)):
         for b in range(dia_mat.size(2)):
             mid = dia_mat.size(2) / dia_mat.size(1) * a
-            diff = abs(b - mid)
-            factor = math.exp(-sigma*diff**2) / math.sqrt(2*3.1415*sigma**2)
+            diff = (b - mid)
+            factor = math.exp(-0.5*diff**2 / sigma**2)
             dia_mat[:, a, b] = factor
+    #dia_mat = dia_mat.softmax(dim=-1)
+    #dia_mat = dia_mat / torch.max(dia_mat)
     print(dia_mat)

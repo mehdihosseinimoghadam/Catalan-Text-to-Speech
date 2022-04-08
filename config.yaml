@@ -61,7 +61,7 @@ tacotron:
     stop_threshold: -11             # Value below which audio generation ends.
 
   training:
-    dia_factor: 0.1
+    dia_factor: 1.
     dia_sigma: 5.
     schedule:
       - 1,  5e-5,  10_000,  8      # progressive training schedule

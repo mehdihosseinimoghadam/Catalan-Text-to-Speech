@@ -81,19 +81,25 @@ class ForwardTrainer:
                 batch['pitch'] = batch['pitch'] * pitch_zoneout_mask.to(device).float()
                 batch['energy'] = batch['energy'] * energy_zoneout_mask.to(device).float()
 
-                pred = model(batch)
 
-                m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
-                m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
+                pred = model.dur_pred(batch['x']).squeeze()
+                model.step += 1
+                #pred = model(batch)
+                pred = {'dur': pred}
+
+                #m1_loss = self.l1_loss(pred['mel'], batch['mel'], batch['mel_len'])
+                #m2_loss = self.l1_loss(pred['mel_post'], batch['mel'], batch['mel_len'])
 
                 dur_loss = self.l1_loss(pred['dur'].unsqueeze(1), batch['dur_hat'].unsqueeze(1), batch['x_len'])
-                pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['x_len'])
-                energy_loss = self.l1_loss(pred['energy'], energy_target.unsqueeze(1), batch['x_len'])
+                #pitch_loss = self.l1_loss(pred['pitch'], pitch_target.unsqueeze(1), batch['x_len'])
+                #energy_loss = self.l1_loss(pred['energy'], energy_target.unsqueeze(1), batch['x_len'])
 
-                loss = m1_loss + m2_loss \
-                       + self.train_cfg['dur_loss_factor'] * dur_loss \
-                       + self.train_cfg['pitch_loss_factor'] * pitch_loss \
-                       + self.train_cfg['energy_loss_factor'] * energy_loss
+                #loss = m1_loss + m2_loss \
+                #       + self.train_cfg['dur_loss_factor'] * dur_loss \
+                #       + self.train_cfg['pitch_loss_factor'] * pitch_loss \
+                #       + self.train_cfg['energy_loss_factor'] * energy_loss
+
+                loss = dur_loss
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -101,13 +107,13 @@ class ForwardTrainer:
                                                self.train_cfg['clip_grad_norm'])
                 optimizer.step()
 
-                m_loss_avg.add(m1_loss.item() + m2_loss.item())
+                #m_loss_avg.add(m1_loss.item() + m2_loss.item())
                 dur_loss_avg.add(dur_loss.item())
                 step = model.get_step()
                 k = step // 1000
 
                 duration_avg.add(time.time() - start)
-                pitch_loss_avg.add(pitch_loss.item())
+                #pitch_loss_avg.add(pitch_loss.item())
 
                 speed = 1. / duration_avg.get()
                 msg = f'| Epoch: {e}/{epochs} ({i}/{total_iters}) | Mel Loss: {m_loss_avg.get():#.4} ' \
@@ -121,9 +127,9 @@ class ForwardTrainer:
                 if step % self.train_cfg['plot_every'] == 0:
                     self.generate_plots(model, session)
 
-                self.writer.add_scalar('Mel_Loss/train', m1_loss + m2_loss, model.get_step())
-                self.writer.add_scalar('Pitch_Loss/train', pitch_loss, model.get_step())
-                self.writer.add_scalar('Energy_Loss/train', energy_loss, model.get_step())
+                #self.writer.add_scalar('Mel_Loss/train', m1_loss + m2_loss, model.get_step())
+                #self.writer.add_scalar('Pitch_Loss/train', pitch_loss, model.get_step())
+                #self.writer.add_scalar('Energy_Loss/train', energy_loss, model.get_step())
                 self.writer.add_scalar('Duration_Loss/train', dur_loss, model.get_step())
                 self.writer.add_scalar('Params/batch_size', session.bs, model.get_step())
                 self.writer.add_scalar('Params/learning_rate', session.lr, model.get_step())

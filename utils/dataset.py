@@ -236,6 +236,7 @@ class TacoDataset(Dataset):
         x = self.tokenizer(text)
         mel = np.load(str(self.path/'mel'/f'{item_id}.npy'))
         mel_len = mel.shape[-1]
+
         return {'x': x, 'mel': mel, 'item_id': item_id,
                 'mel_len': mel_len, 'x_len': len(x)}
 
@@ -264,8 +265,15 @@ class ForwardDataset(Dataset):
         dur = np.load(str(self.path/'alg'/f'{item_id}.npy'))
         pitch = np.load(str(self.path/'phon_pitch'/f'{item_id}.npy'))
         energy = np.load(str(self.path/'phon_energy'/f'{item_id}.npy'))
+
+        dur_hat = dur.copy()
+        text = self.tokenizer.decode([int(t) for t in x])
+        for i, (t, d) in enumerate(zip(text, dur_hat[:])):
+            if t == ',':
+                dur_hat[i+1] = max(dur_hat[i+1], 25)
+
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),
-                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy}
+                'mel_len': mel_len, 'dur': dur, 'pitch': pitch, 'energy': energy, 'dur_hat': dur_hat}
 
     def __len__(self):
         return len(self.metadata)
@@ -297,7 +305,11 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
     mel_lens = [b['mel_len'] for b in batch]
     mel_lens = torch.tensor(mel_lens)
 
-    dur, pitch, energy = None, None, None
+    dur, pitch, energy, dur_hat = None, None, None, None
+    if 'dur_hat' in batch[0]:
+        dur_hat = [pad1d(b['dur_hat'][:max_x_len], max_x_len) for b in batch]
+        dur_hat = np.stack(dur_hat)
+        dur_hat = torch.tensor(dur_hat).float()
     if 'dur' in batch[0]:
         dur = [pad1d(b['dur'][:max_x_len], max_x_len) for b in batch]
         dur = np.stack(dur)
@@ -312,7 +324,8 @@ def collate_tts(batch: List[Dict[str, Union[str, torch.tensor]]], r: int) -> Dic
         energy = torch.tensor(energy).float()
 
     return {'x': text, 'mel': mel, 'item_id': item_id, 'x_len': x_len,
-            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch, 'energy': energy}
+            'mel_len': mel_lens, 'dur': dur, 'pitch': pitch,
+            'energy': energy, 'dur_hat': dur_hat}
 
 
 class BinnedLengthSampler(Sampler):

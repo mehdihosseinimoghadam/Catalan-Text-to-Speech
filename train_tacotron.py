@@ -120,7 +120,7 @@ def create_align_features(model: Tacotron,
         print('Extracting durations using attention peak counts...')
         dur_extraction_func = extract_durations_per_count
 
-    for i, batch in enumerate(tqdm.tqdm(dataset, total=11000), 1):
+    for i, batch in enumerate(dataset, 1):
         batch = to_device(batch, device=device)
         with torch.no_grad():
             _, _, att_batch = model(batch['x'], batch['mel'])
@@ -138,25 +138,28 @@ def create_align_features(model: Tacotron,
 
 
         att = att_orig.copy()
-        durs = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=None)
+        durs, att_score_new, dur_probs = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=None)
         att = att_orig.copy()
-        durs_2 = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=sil_mask)
+        durs_2, att_score_new, dur_probs = extract_durations_with_dijkstra(seq, att, mel_len, sil_mask=sil_mask)
 
         text = Tokenizer().decode([int(c) for c in seq])
+        #print()
+        #print(item_id, sharp_score, att_score_new)
+        #print(text)
+
+        for t, d, d2, dp in zip(text, durs, durs_2, dur_probs):
+            print(t, d, d2, dp)
+
         print()
-        print(item_id, sharp_score)
-        print(text)
-
-        for t, d, d2 in zip(text, durs, durs_2):
-            print(t, d, d2)
-
         print('sharp score:', sharp_score)
+        print('att score new:', att_score_new)
         if np.sum(durs) != mel_len:
             print(f'WARNINNG: Sum of durations did not match mel length for item {item_id}!')
         np.save(str(paths.alg / f'{item_id}.npy'), durs_2, allow_pickle=False)
-        bar = progbar(i, iters)
-        msg = f'{bar} {i}/{iters} Files '
-        stream(msg)
+        np.save(str(paths.alg_probs / f'{item_id}.npy'), dur_probs, allow_pickle=False)
+        #bar = progbar(i, iters)
+        #msg = f'{bar} {i}/{iters} Files '
+        #stream(msg)
     pickle_binary(att_score_dict, paths.data / 'att_score_dict.pkl')
     print('Extracting Pitch Values...')
     extract_pitch_energy(save_path_pitch=paths.phon_pitch,

@@ -86,15 +86,27 @@ def extract_durations_with_dijkstra(seq: np.array,
     mel_text = {}
     durations = np.zeros(seq.shape[0], dtype=np.int32)
 
+    att_scores = []
+
     # collect indices (mel, text) along the path
     for node_index in path:
         i, j = from_node_index(node_index, cols)
         mel_text[i] = j
+        if sil_mask is not None:
+            att_scores.append(float(att[i, j]))
+        else:
+            att_scores.append(1.)
 
     for j in mel_text.values():
         durations[j] += 1
 
-    return durations
+
+    bad = [a for a in att_scores if a < 0.1]
+
+    att_score = 1 - len(bad) / len(att_scores) if len(att_scores) > 0 else 1.
+
+
+    return durations, att_score, np.array(att_scores).astype(np.float32)
 
 
 def extract_durations_per_count(seq: np.array,

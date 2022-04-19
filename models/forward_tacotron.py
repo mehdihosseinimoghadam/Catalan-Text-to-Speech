@@ -126,6 +126,7 @@ class ForwardTacotron(nn.Module):
         self.energy_strength = energy_strength
         self.pitch_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
         self.energy_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
+        self.dur_prob_proj = nn.Conv1d(1, 2 * prenet_dims, kernel_size=3, padding=1)
 
     def __repr__(self):
         num_params = sum([np.prod(p.size()) for p in self.parameters()])
@@ -138,6 +139,7 @@ class ForwardTacotron(nn.Module):
         mel_lens = batch['mel_len']
         pitch = batch['pitch'].unsqueeze(1)
         energy = batch['energy'].unsqueeze(1)
+        dur_probs = batch['dur_probs']
 
         if self.training:
             self.step += 1
@@ -159,6 +161,10 @@ class ForwardTacotron(nn.Module):
         x = x + energy_proj * self.energy_strength
 
         x = self.lr(x, dur)
+
+        dur_proj = self.dur_prob_proj(dur_probs.unsqueeze(1))
+        dur_proj = self._pad(dur_proj[:, :, :x.size(1)], x.size(1))
+        x = x + dur_proj.transpose(1, 2)
 
         x = pack_padded_sequence(x, lengths=mel_lens.cpu(), enforce_sorted=False,
                                  batch_first=True)
@@ -236,6 +242,10 @@ class ForwardTacotron(nn.Module):
         x = x + energy_proj * self.energy_strength
 
         x = self.lr(x, dur_hat)
+
+        dur_probs = torch.ones((1, x.size(1))).to(x.device)
+        dur_proj = self.dur_prob_proj(dur_probs.unsqueeze(1))
+        x = x + dur_proj.transpose(1, 2)
 
         x, _ = self.lstm(x)
 

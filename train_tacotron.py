@@ -122,9 +122,10 @@ def create_align_features(model: Tacotron,
 
     for i, batch in enumerate(dataset, 1):
         batch = to_device(batch, device=device)
+
+
         with torch.no_grad():
             _, _, att_batch = model(batch['x'], batch['mel'])
-
 
         sil_mask = batch['mel'][0].mean(dim=0)
 

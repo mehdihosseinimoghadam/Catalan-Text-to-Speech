@@ -269,7 +269,7 @@ class ForwardDataset(Dataset):
         dur_hat = dur.copy()
         text = self.tokenizer.decode([int(t) for t in x])
         for i, (t, d) in enumerate(zip(text, dur_hat[:])):
-            if t == ',':
+            if t == ',' and i < len(dur_hat) - 1:
                 dur_hat[i+1] = max(dur_hat[i+1], 25)
 
         return {'x': x, 'mel': mel, 'item_id': item_id, 'x_len': len(x),

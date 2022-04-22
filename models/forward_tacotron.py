@@ -85,9 +85,9 @@ class ForwardTacotron(nn.Module):
         super().__init__()
 
         self.denoiser = nn.Sequential(
-            BatchNormConv(80, 512, 5, padding=2),
-            BatchNormConv(512, 512, 5, padding=2),
-            BatchNormConv(512, 80, 5, padding=2),
+            BatchNormConv(80, 512, 5),
+            BatchNormConv(512, 512, 5),
+            BatchNormConv(512, 80, 5),
         )
         self.rnn_dims = rnn_dims
         self.padding_value = padding_value

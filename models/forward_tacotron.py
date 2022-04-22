@@ -4,9 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from keras.models import Sequential
 from torch.nn import Embedding
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
 from models.common_layers import CBHG, LengthRegulator
 from utils.text.symbols import phonemes

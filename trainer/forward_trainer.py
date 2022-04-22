@@ -145,8 +145,8 @@ class ForwardTrainer:
         batch = session.val_sample
         B, N, T = batch['mel'].size()
         mel_zoneout_mask = torch.rand((B, 1, T)) > 0.3
-        batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device)
         batch = to_device(batch, device=device)
+        batch['mel_in'] = batch['mel'] * mel_zoneout_mask.to(device)
 
         pred = model(batch)
         m1_hat = np_now(pred['mel'])[0, :600, :]

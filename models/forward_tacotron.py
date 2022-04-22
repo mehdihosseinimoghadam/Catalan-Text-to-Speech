@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from keras.models import Sequential
 from torch.nn import Embedding
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
@@ -84,6 +85,12 @@ class ForwardTacotron(nn.Module):
                  n_mels: int,
                  padding_value=-11.5129):
         super().__init__()
+
+        self.denoiser = nn.Sequential(
+            nn.Conv1d(80, 512, 5, padding=2),
+            nn.Conv1d(512, 512, 5, padding=2),
+            nn.Conv1d(512, 80, 5, padding=2),
+        )
         self.rnn_dims = rnn_dims
         self.padding_value = padding_value
         self.embedding = nn.Embedding(num_chars, embed_dims)
@@ -133,7 +140,7 @@ class ForwardTacotron(nn.Module):
 
     def forward(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         x = batch['x']
-        mel = batch['mel']
+        mel = batch['mel_in']
         dur = batch['dur']
         mel_lens = batch['mel_len']
         pitch = batch['pitch'].unsqueeze(1)
@@ -142,43 +149,9 @@ class ForwardTacotron(nn.Module):
         if self.training:
             self.step += 1
 
-        dur_hat = self.dur_pred(x).squeeze(-1)
-        pitch_hat = self.pitch_pred(x).transpose(1, 2)
-        energy_hat = self.energy_pred(x).transpose(1, 2)
+        mel = self.denoiser(mel)
 
-        x = self.embedding(x)
-        x = x.transpose(1, 2)
-        x = self.prenet(x)
-
-        pitch_proj = self.pitch_proj(pitch)
-        pitch_proj = pitch_proj.transpose(1, 2)
-        x = x + pitch_proj * self.pitch_strength
-
-        energy_proj = self.energy_proj(energy)
-        energy_proj = energy_proj.transpose(1, 2)
-        x = x + energy_proj * self.energy_strength
-
-        x = self.lr(x, dur)
-
-        x = pack_padded_sequence(x, lengths=mel_lens.cpu(), enforce_sorted=False,
-                                 batch_first=True)
-
-        x, _ = self.lstm(x)
-
-        x, _ = pad_packed_sequence(x, padding_value=self.padding_value, batch_first=True)
-
-        x = self.lin(x)
-        x = x.transpose(1, 2)
-
-        x_post = self.postnet(x)
-        x_post = self.post_proj(x_post)
-        x_post = x_post.transpose(1, 2)
-
-        x_post = self._pad(x_post, mel.size(2))
-        x = self._pad(x, mel.size(2))
-
-        return {'mel': x, 'mel_post': x_post,
-                'dur': dur_hat, 'pitch': pitch_hat, 'energy': energy_hat}
+        return {'mel': mel}
 
     def generate(self,
                  x: torch.Tensor,

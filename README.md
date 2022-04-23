@@ -24,11 +24,6 @@ does not use any attention. Hence, the required memory grows linearly with text 
 Check out the latest [audio samples](https://mehdihosseinimoghadam.github.io//posts/2022/04/Catalan-Text-To-Speech/) (ForwardTacotron + WaveRNN)!
 
 
-Energy conditioning reduces mel validation loss:
-<p align="center">
-  <img src="assets/energy_tb.png" width="700" />
-</p>
-
 ## 🔈 Samples
 
 [Can be found here.](https://mehdihosseinimoghadam.github.io//posts/2022/04/Catalan-Text-To-Speech/)

@@ -55,8 +55,8 @@ You can try out the latest pretrained model with the following notebook:
 
 ## Maintainers
 
-* Mehdi Hosseini Moghadam, github: [cschaefer26](https://github.com/cschaefer26)
-* Christian Schäfer, github: [mehdihosseinimoghadam](https://github.com/mehdihosseinimoghadam)
+* Mehdi Hosseini Moghadam, github: [mehdihosseinimoghadam](https://github.com/mehdihosseinimoghadam) 
+* Christian Schäfer, github: [cschaefer26](https://github.com/cschaefer26)
 
 ## Copyright
 

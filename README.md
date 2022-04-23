@@ -4,13 +4,18 @@ Based on Microsoft's [FastSpeech](https://www.microsoft.com/en-us/research/blog/
 
 Catalan Version of [FastSpeech Repo](https://github.com/as-ideas/ForwardTacotron)
 
-<p align="center">
+
+<img width="897" alt="fast_speech" src="https://user-images.githubusercontent.com/53477752/164887535-20ac8f83-476b-4174-8ba8-8387674213f9.png">
+<br>
+![model](https://user-images.githubusercontent.com/53477752/164887542-c36457b2-e095-4f31-b6f5-5798a6c5e6bf.png)
+
+<!-- <p align="center">
   <img src="assets/model.png" width="700" />
 </p>
 <p align="center">
   <b>Figure 1:</b> Model Architecture.
 </p>
-
+ -->
 The model has following advantages:
 - **Robustness:** No repeats and failed attention modes for challenging sentences.
 - **Speed:** The generation of a mel spectogram takes about 0.04s on a GeForce RTX 2080.

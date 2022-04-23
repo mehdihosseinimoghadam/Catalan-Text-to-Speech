@@ -1,7 +1,7 @@
 
 voc_model_id: 'ljspeech_voc'
 tts_model_id: 'ljspeech_tts'
-data_path: 'data/'                                        # output data path
+data_path: '/content/content/dataset_folder'                                        # output data path
 
 tts_model: 'forward_tacotron'                             # choices: [forward_tacotron, fast_pitch]
 
@@ -38,7 +38,7 @@ preprocessing:
 
   seed: 42
   n_val: 200
-  language: 'en-us'
+  language: 'ca'
   cleaner_name: 'english_cleaners'   # choices: ['english_cleaners', 'no_cleaners'], expands numbers and abbreviations.
   use_phonemes: True                 # whether to phonemize the text
                                      # if set to False, you have to provide the phonemized text yourself
@@ -69,7 +69,7 @@ tacotron:
 
     max_mel_len: 1250                # if you have a couple of extremely long spectrograms you might want to use this
     clip_grad_norm: 1.0              # clips the gradient norm to prevent explosion - set to None if not needed
-    checkpoint_every: 10000          # checkpoints the model every x steps
+    checkpoint_every: 4000          # checkpoints the model every x steps
     plot_every: 1000                 # generates samples and plots every x steps
 
 
@@ -117,12 +117,12 @@ forward_tacotron:
 
     max_mel_len: 1250
     clip_grad_norm: 1.0           # clips the gradient norm to prevent explosion - set to None if not needed
-    checkpoint_every: 10_000      # checkpoints the model every x steps
+    checkpoint_every: 5_000      # checkpoints the model every x steps
     plot_every: 1000              # generates samples and plots every x steps
 
     filter_attention: True               # whether to filter data with bad attention scores
     min_attention_sharpness: 0.5         # filter data with bad attention sharpness score, if 0 then no filter
-    min_attention_alignment: 0.95        # filter data with bad attention alignment score, if 0 then no filter
+    min_attention_alignment: 0.75        # filter data with bad attention alignment score, if 0 then no filter
 
 
 fast_pitch:
@@ -176,7 +176,7 @@ fast_pitch:
 
     max_mel_len: 1250
     clip_grad_norm: 1.0           # clips the gradient norm to prevent explosion - set to None if not needed
-    checkpoint_every: 10_000      # checkpoints the model every x steps
+    checkpoint_every: 5_000      # checkpoints the model every x steps
     plot_every: 1000
 
     filter_attention: True               # whether to filter data with bad attention scores

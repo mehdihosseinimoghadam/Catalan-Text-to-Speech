@@ -1,4 +1,4 @@
-# Catalan Text to Speech 🇪🇸
+# Catalan Text to Speech 🇪
 
 Based on Microsoft's [FastSpeech](https://www.microsoft.com/en-us/research/blog/fastspeech-new-text-to-speech-model-improves-on-speed-accuracy-and-controllability/)
 
